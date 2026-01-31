@@ -1,25 +1,33 @@
 package com.example.smartspend.ui.add
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.smartspend.data.ai.AiTier
 
 // Premium Color Palette (same as HomeScreen)
 private val GradientStart = Color(0xFF667EEA)
@@ -27,6 +35,9 @@ private val GradientEnd = Color(0xFF764BA2)
 private val CardBackground = Color(0xFF1E1E2E)
 private val SurfaceBackground = Color(0xFF121218)
 private val AccentGreen = Color(0xFF00D9A5)
+private val AccentGold = Color(0xFFFFD700)
+private val AccentPurple = Color(0xFFA78BFA)
+private val AccentBlue = Color(0xFF60A5FA)
 private val TextPrimary = Color(0xFFFFFFFF)
 private val TextSecondary = Color(0xFFB0B0C0)
 
@@ -35,20 +46,24 @@ val categories = listOf("Food", "Transport", "Shopping", "Entertainment", "Bills
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddExpenseScreen(
+    modifier: Modifier = Modifier,
     onNavigateBack: () -> Unit,
     onSaveExpense: (title: String, amount: Double, category: String, notes: String?) -> Unit,
-    onScanReceipt: () -> Unit,
+    onScanReceipt: (AiTier) -> Unit,
     isScanning: Boolean = false,
     scannedTitle: String? = null,
     scannedAmount: Double? = null,
     scannedCategory: String? = null,
-    modifier: Modifier = Modifier
+    currentAiTier: AiTier = AiTier.BASIC,
+    unlockedTiers: Set<AiTier> = setOf(AiTier.BASIC), // Tiers user has purchased
+    onTierSelected: (AiTier) -> Unit = {}
 ) {
     var title by remember(scannedTitle) { mutableStateOf(scannedTitle ?: "") }
     var amount by remember(scannedAmount) { mutableStateOf(scannedAmount?.toString() ?: "") }
     var selectedCategory by remember(scannedCategory) { mutableStateOf(scannedCategory ?: categories[0]) }
     var notes by remember { mutableStateOf("") }
     var showCategoryDropdown by remember { mutableStateOf(false) }
+    var selectedTier by remember { mutableStateOf(currentAiTier) }
 
     Scaffold(
         containerColor = SurfaceBackground,
@@ -79,11 +94,22 @@ fun AddExpenseScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Spacer(modifier = Modifier.height(8.dp))
+            
+            // AI Tier Selector
+            AiTierSelector(
+                selectedTier = selectedTier,
+                unlockedTiers = unlockedTiers,
+                onTierSelected = { tier ->
+                    selectedTier = tier
+                    onTierSelected(tier)
+                }
+            )
 
             // Scan Receipt Button - The STAR feature!
             ScanReceiptButton(
-                onClick = onScanReceipt,
-                isScanning = isScanning
+                onClick = { onScanReceipt(selectedTier) },
+                isScanning = isScanning,
+                selectedTier = selectedTier
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -251,11 +277,192 @@ fun AddExpenseScreen(
     }
 }
 
+/**
+ * AI Tier Selector - Horizontal scrolling cards for tier selection
+ */
+@Composable
+private fun AiTierSelector(
+    selectedTier: AiTier,
+    unlockedTiers: Set<AiTier>,
+    onTierSelected: (AiTier) -> Unit
+) {
+    Column {
+        Text(
+            text = "AI Model",
+            style = MaterialTheme.typography.titleSmall,
+            color = TextSecondary,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(horizontal = 4.dp)
+        ) {
+            items(AiTier.entries) { tier ->
+                AiTierCard(
+                    tier = tier,
+                    isSelected = tier == selectedTier,
+                    isUnlocked = tier in unlockedTiers,
+                    onClick = {
+                        if (tier in unlockedTiers) {
+                            onTierSelected(tier)
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Individual AI Tier Card
+ */
+@Composable
+private fun AiTierCard(
+    tier: AiTier,
+    isSelected: Boolean,
+    isUnlocked: Boolean,
+    onClick: () -> Unit
+) {
+    val tierColor = when (tier) {
+        AiTier.BASIC -> AccentGreen
+        AiTier.STANDARD -> AccentBlue
+        AiTier.ADVANCED -> AccentPurple
+        AiTier.ELITE -> AccentGold
+    }
+    
+    val tierIcon = when (tier) {
+        AiTier.BASIC -> "⚡"
+        AiTier.STANDARD -> "🚀"
+        AiTier.ADVANCED -> "🧠"
+        AiTier.ELITE -> "✨"
+    }
+    
+    val animatedBorderColor by animateColorAsState(
+        targetValue = if (isSelected) tierColor else Color.Transparent,
+        label = "borderColor"
+    )
+    
+    val animatedBackgroundColor by animateColorAsState(
+        targetValue = if (isSelected) tierColor.copy(alpha = 0.15f) else CardBackground,
+        label = "backgroundColor"
+    )
+    
+    Card(
+        modifier = Modifier
+            .width(140.dp)
+            .clickable(enabled = isUnlocked) { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = animatedBackgroundColor),
+        border = BorderStroke(2.dp, animatedBorderColor)
+    ) {
+        Box {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Tier Icon
+                Text(
+                    text = tierIcon,
+                    fontSize = 24.sp
+                )
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                // Tier Name
+                Text(
+                    text = tier.displayName,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = if (isUnlocked) tierColor else TextSecondary,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                // RPD Badge
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(tierColor.copy(alpha = if (isUnlocked) 0.2f else 0.1f))
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = "${tier.requestsPerDay}/day",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (isUnlocked) tierColor else TextSecondary,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                // Description (truncated)
+                Text(
+                    text = tier.description,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextSecondary.copy(alpha = if (isUnlocked) 1f else 0.5f),
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    lineHeight = 14.sp
+                )
+            }
+            
+            // Lock overlay for locked tiers
+            if (!isUnlocked) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(SurfaceBackground.copy(alpha = 0.6f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Lock,
+                        contentDescription = "Locked",
+                        tint = TextSecondary,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+            }
+            
+            // Checkmark for selected tier
+            if (isSelected && isUnlocked) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .size(20.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(tierColor),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Check,
+                        contentDescription = "Selected",
+                        tint = Color.Black,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun ScanReceiptButton(
     onClick: () -> Unit,
-    isScanning: Boolean
+    isScanning: Boolean,
+    selectedTier: AiTier
 ) {
+    val tierColor = when (selectedTier) {
+        AiTier.BASIC -> AccentGreen
+        AiTier.STANDARD -> AccentBlue
+        AiTier.ADVANCED -> AccentPurple
+        AiTier.ELITE -> AccentGold
+    }
+    
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -286,24 +493,25 @@ private fun ScanReceiptButton(
                         strokeWidth = 2.dp
                     )
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "Scanning Receipt...",
-                        color = TextPrimary,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    Column {
+                        Text(
+                            text = "Scanning Receipt...",
+                            color = TextPrimary,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = "Using ${selectedTier.displayName}",
+                            color = TextPrimary.copy(alpha = 0.8f),
+                            fontSize = 12.sp
+                        )
+                    }
                 }
             } else {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    Icon(
-                        Icons.Default.CameraAlt,
-                        contentDescription = "Scan",
-                        tint = TextPrimary,
-                        modifier = Modifier.size(28.dp)
-                    )
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
@@ -312,11 +520,28 @@ private fun ScanReceiptButton(
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold
                         )
-                        Text(
-                            text = "AI will extract the details for you",
-                            color = TextPrimary.copy(alpha = 0.8f),
-                            fontSize = 12.sp
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Using ",
+                                color = TextPrimary.copy(alpha = 0.8f),
+                                fontSize = 12.sp
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(tierColor.copy(alpha = 0.3f))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = selectedTier.displayName,
+                                    color = TextPrimary,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
                     }
                 }
             }
