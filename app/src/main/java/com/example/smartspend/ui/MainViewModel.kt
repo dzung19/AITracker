@@ -1,18 +1,15 @@
 package com.example.smartspend.ui
 
-import android.app.Application
-import android.content.Context
 import android.util.Log
 import androidx.camera.core.ImageProxy
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.smartspend.BuildConfig
 import com.example.smartspend.data.ai.AiTier
-import com.example.smartspend.data.ai.GeminiService
-import com.example.smartspend.data.local.AppDatabase
+import com.example.smartspend.data.ai.GeminiServiceManager
 import com.example.smartspend.data.local.Expense
 import com.example.smartspend.data.repository.ExpenseRepository
 import com.example.smartspend.data.scanner.ReceiptScannerService
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -20,38 +17,26 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import androidx.core.content.edit
+import javax.inject.Inject
 
-class MainViewModel(application: Application) : AndroidViewModel(application) {
+@HiltViewModel
+class MainViewModel @Inject constructor(
+    private val repository: ExpenseRepository,
+    private val receiptScanner: ReceiptScannerService,
+    private val geminiServiceManager: GeminiServiceManager
+) : ViewModel() {
     
-    companion object {
-        private const val PREFS_NAME = "smartspend_prefs"
-        private const val KEY_AI_TIER = "ai_tier"
-        private const val KEY_UNLOCKED_TIERS = "unlocked_tiers"
-    }
+    // Expose expenses from repository
+    val expenses: StateFlow<List<Expense>> = repository.allExpenses
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     
-    private val repository: ExpenseRepository
-    private val receiptScanner = ReceiptScannerService()
-    private val prefs = application.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    val totalSpending: StateFlow<Double> = repository.totalSpending
+        .map { it ?: 0.0 }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
     
-    // API key is read from local.properties via BuildConfig (secure, not in git)
-    private val apiKey: String? = try {
-        val key = BuildConfig.GEMINI_API_KEY
-        if (key.isNotBlank()) key else null
-    } catch (e: Exception) {
-        Log.e("MainViewModel", "Failed to get API key", e)
-        null
-    }
-    
-    val expenses: StateFlow<List<Expense>>
-    val totalSpending: StateFlow<Double>
-    
-    // AI Tier state
-    private val _currentAiTier = MutableStateFlow(loadSavedTier())
-    val currentAiTier: StateFlow<AiTier> = _currentAiTier.asStateFlow()
-    
-    private val _unlockedTiers = MutableStateFlow(loadUnlockedTiers())
-    val unlockedTiers: StateFlow<Set<AiTier>> = _unlockedTiers.asStateFlow()
+    // AI Tier state - delegated to GeminiServiceManager
+    val currentAiTier: StateFlow<AiTier> = geminiServiceManager.currentTier
+    val unlockedTiers: StateFlow<Set<AiTier>> = geminiServiceManager.unlockedTiers
     
     // Scanning state
     private val _isScanning = MutableStateFlow(false)
@@ -69,91 +54,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _scanError = MutableStateFlow<String?>(null)
     val scanError: StateFlow<String?> = _scanError.asStateFlow()
     
-    // Pending tier for when camera opens
-    private var pendingTier: AiTier = AiTier.BASIC
-    
-    init {
-        val database = AppDatabase.getDatabase(application)
-        val expenseDao = database.expenseDao()
-        repository = ExpenseRepository(expenseDao)
-        
-        expenses = repository.allExpenses
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-        
-        totalSpending = repository.totalSpending
-            .map { it ?: 0.0 }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
-    }
-    
     // ==================== AI TIER MANAGEMENT ====================
     
     /**
      * Select an AI tier for scanning
      */
     fun selectAiTier(tier: AiTier) {
-        if (tier in _unlockedTiers.value) {
-            _currentAiTier.value = tier
-            pendingTier = tier
-            saveTier(tier)
-        }
+        geminiServiceManager.selectTier(tier)
     }
     
     /**
      * Unlock a tier (call this when in-app purchase is successful)
      */
     fun unlockTier(tier: AiTier) {
-        val updated = _unlockedTiers.value + tier
-        _unlockedTiers.value = updated
-        saveUnlockedTiers(updated)
+        geminiServiceManager.unlockTier(tier)
     }
     
     /**
      * Unlock all tiers (for testing or premium purchase)
      */
     fun unlockAllTiers() {
-        val allTiers = AiTier.entries.toSet()
-        _unlockedTiers.value = allTiers
-        saveUnlockedTiers(allTiers)
-    }
-    
-    private fun loadSavedTier(): AiTier {
-        val ordinal = prefs.getInt(KEY_AI_TIER, 0)
-        return AiTier.fromOrdinal(ordinal)
-    }
-    
-    private fun saveTier(tier: AiTier) {
-        prefs.edit { putInt(KEY_AI_TIER, tier.ordinal) }
-    }
-    
-    private fun loadUnlockedTiers(): Set<AiTier> {
-        val savedSet = prefs.getStringSet(KEY_UNLOCKED_TIERS, null)
-        return if (savedSet != null) {
-            savedSet.mapNotNull { ordinalStr ->
-                ordinalStr.toIntOrNull()?.let { AiTier.fromOrdinal(it) }
-            }.toSet()
-        } else {
-            // Default: BASIC tier is always unlocked (free tier)
-            setOf(AiTier.BASIC)
-        }
-    }
-    
-    private fun saveUnlockedTiers(tiers: Set<AiTier>) {
-        val ordinalSet = tiers.map { it.ordinal.toString() }.toSet()
-        prefs.edit().putStringSet(KEY_UNLOCKED_TIERS, ordinalSet).apply()
-    }
-    
-    /**
-     * Create a GeminiService with the specified tier
-     */
-    private fun createGeminiService(tier: AiTier): GeminiService? {
-        return apiKey?.let { key ->
-            try {
-                GeminiService(key, tier)
-            } catch (e: Exception) {
-                Log.e("MainViewModel", "Failed to create GeminiService", e)
-                null
-            }
-        }
+        geminiServiceManager.unlockAllTiers()
     }
     
     // ==================== EXPENSE MANAGEMENT ====================
@@ -177,7 +98,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
     
-
+    // ==================== RECEIPT SCANNING ====================
+    
     /**
      * The HYBRID AI magic happens here:
      * 1. Receive image from CameraX
@@ -188,7 +110,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _isScanning.value = true
         _scanError.value = null
         
-        val tier = pendingTier
+        val currentTier = geminiServiceManager.currentTier.value
         
         viewModelScope.launch {
             try {
@@ -204,16 +126,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 
                 // Step 2: Gemini parsing with selected tier
-                val geminiService = createGeminiService(tier)
-                if (geminiService != null) {
-                    Log.d("MainViewModel", "Step 2: Parsing with ${tier.displayName} (${tier.modelName})...")
-                    val parsed = geminiService.parseReceiptText(rawText)
+                if (geminiServiceManager.isConfigured) {
+                    Log.d("MainViewModel", "Step 2: Parsing with ${currentTier.displayName} (${currentTier.modelName})...")
+                    val parsed = geminiServiceManager.parseReceipt(rawText)
                     
                     if (parsed != null) {
                         _scannedTitle.value = parsed.title
                         _scannedAmount.value = parsed.amount
                         _scannedCategory.value = parsed.category
-                        Log.d("MainViewModel", "Parsed with ${tier.displayName}: $parsed")
+                        Log.d("MainViewModel", "Parsed with ${currentTier.displayName}: $parsed")
                     } else {
                         _scanError.value = "Could not parse receipt. Please enter manually."
                     }

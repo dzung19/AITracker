@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -32,8 +33,8 @@ sealed class Screen(val route: String) {
  */
 @Composable
 fun SmartSpendNavHost(
-    viewModel: MainViewModel,
-    navController: NavHostController = rememberNavController()
+    navController: NavHostController = rememberNavController(),
+    viewModel: MainViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     
@@ -140,3 +141,4 @@ fun SmartSpendNavHost(
         }
     }
 }
+

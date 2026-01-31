@@ -333,24 +333,36 @@ class GeminiService(
             return null
         }
         
-        // Truncate very long receipts to save tokens (first 1500 chars is enough)
-        val truncatedText = if (rawText.length > 1500) rawText.take(1500) else rawText
+        // Truncate very long receipts to save tokens (first 2000 chars is enough)
+        val truncatedText = if (rawText.length > 2000) rawText.take(2000) else rawText
         
-        // Simplified prompt for faster/cheaper response
-        val prompt = """Extract from receipt: $truncatedText
+        // Improved prompt that's explicit about returning ONE summary JSON
+        val prompt = """You are a receipt parser. Analyze this receipt text and extract the TOTAL expense.
 
-Return JSON only: {"title":"store name","amount":0.00,"category":"Food|Transport|Shopping|Entertainment|Bills|Other"}"""
+RECEIPT TEXT:
+$truncatedText
+
+INSTRUCTIONS:
+1. Find the STORE NAME (merchant name at top of receipt)
+2. Find the TOTAL AMOUNT (look for "Total", "Tổng", "Thành tiền", or the final/largest amount)
+3. Categorize as: Food, Transport, Shopping, Entertainment, Bills, or Other
+
+Return EXACTLY ONE JSON object with the TOTAL purchase (not individual items):
+{"title":"Store Name","amount":123.45,"category":"Category"}
+
+IMPORTANT: Return ONLY the JSON, no other text, no markdown, no multiple objects."""
 
         return try {
             val response = model.generateContent(prompt)
-            val jsonText = response.text?.trim()
-                ?.removePrefix("```json")
-                ?.removePrefix("```")
-                ?.removeSuffix("```")
-                ?.trim()
+            val responseText = response.text?.trim() ?: ""
             
             Log.d("GeminiService", "Tier: ${tier.displayName}, Model: ${tier.modelName}")
-            Log.d("GeminiService", "Raw response: $jsonText")
+            Log.d("GeminiService", "Raw response: $responseText")
+            
+            // Extract JSON from response (handles markdown blocks and extracts first valid JSON)
+            val jsonText = extractFirstJson(responseText)
+            
+            Log.d("GeminiService", "Extracted JSON: $jsonText")
             
             jsonText?.let { 
                 json.decodeFromString<ParsedExpense>(it)
@@ -359,6 +371,62 @@ Return JSON only: {"title":"store name","amount":0.00,"category":"Food|Transport
             Log.e("GeminiService", "Failed to parse receipt with ${tier.displayName}", e)
             null
         }
+    }
+    
+    /**
+     * Extracts the first valid JSON object from a response string.
+     * Handles responses with markdown code blocks, multiple JSON objects, or extra text.
+     */
+    private fun extractFirstJson(text: String): String? {
+        // Clean up markdown code blocks
+        var cleaned = text
+            .replace("```json", "")
+            .replace("```", "")
+            .trim()
+        
+        // If the text starts with '{', try to find the matching '}'
+        if (cleaned.startsWith("{")) {
+            var braceCount = 0
+            var endIndex = -1
+            
+            for (i in cleaned.indices) {
+                when (cleaned[i]) {
+                    '{' -> braceCount++
+                    '}' -> {
+                        braceCount--
+                        if (braceCount == 0) {
+                            endIndex = i
+                            break
+                        }
+                    }
+                }
+            }
+            
+            if (endIndex > 0) {
+                return cleaned.substring(0, endIndex + 1)
+            }
+        }
+        
+        // Try to extract using regex as fallback
+        val jsonPattern = """\{[^{}]*"title"[^{}]*"amount"[^{}]*"category"[^{}]*\}""".toRegex()
+        val match = jsonPattern.find(cleaned)
+        if (match != null) {
+            return match.value
+        }
+        
+        // Last resort: find first { and last } that contains our expected fields
+        val firstBrace = cleaned.indexOf('{')
+        if (firstBrace >= 0) {
+            val endBrace = cleaned.indexOf('}', firstBrace)
+            if (endBrace > firstBrace) {
+                val candidate = cleaned.substring(firstBrace, endBrace + 1)
+                if (candidate.contains("title") && candidate.contains("amount")) {
+                    return candidate
+                }
+            }
+        }
+        
+        return null
     }
     
     companion object {
