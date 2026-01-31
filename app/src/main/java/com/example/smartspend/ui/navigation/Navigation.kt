@@ -48,6 +48,7 @@ fun SmartSpendNavHost(
     val scannedTitle by viewModel.scannedTitle.collectAsState()
     val scannedAmount by viewModel.scannedAmount.collectAsState()
     val scannedCategory by viewModel.scannedCategory.collectAsState()
+    val scannedNote by viewModel.scannedNote.collectAsState()
     val scanError by viewModel.scanError.collectAsState()
     
     // AI Tier state
@@ -126,6 +127,7 @@ fun SmartSpendNavHost(
                 scannedTitle = scannedTitle,
                 scannedAmount = scannedAmount,
                 scannedCategory = scannedCategory,
+                scannedNote = scannedNote,
                 currentAiTier = currentAiTier,
                 unlockedTiers = unlockedTiers,
                 onTierSelected = { tier ->

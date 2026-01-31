@@ -95,6 +95,9 @@ class MainViewModel @Inject constructor(
     
     private val _scannedCategory = MutableStateFlow<String?>(null)
     val scannedCategory: StateFlow<String?> = _scannedCategory.asStateFlow()
+
+    private val _scannedNote = MutableStateFlow<String?>(null)
+    val scannedNote: StateFlow<String?> = _scannedNote.asStateFlow()
     
     private val _scanError = MutableStateFlow<String?>(null)
     val scanError: StateFlow<String?> = _scanError.asStateFlow()
@@ -218,6 +221,7 @@ class MainViewModel @Inject constructor(
                         _scannedTitle.value = parsed.title
                         _scannedAmount.value = parsed.amount
                         _scannedCategory.value = parsed.category
+                        _scannedNote.value = parsed.note
                         Log.d("MainViewModel", "Parsed with ${currentTier.displayName}: $parsed")
                     } else {
                         _scanError.value = "Could not parse receipt. Please enter manually."
@@ -241,6 +245,7 @@ class MainViewModel @Inject constructor(
         _scannedTitle.value = null
         _scannedAmount.value = null
         _scannedCategory.value = null
+        _scannedNote.value = null
         _scanError.value = null
     }
     

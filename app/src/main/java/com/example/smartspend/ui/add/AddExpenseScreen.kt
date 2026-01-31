@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -54,14 +55,23 @@ fun AddExpenseScreen(
     scannedTitle: String? = null,
     scannedAmount: Double? = null,
     scannedCategory: String? = null,
+    scannedNote: String? = null,
     currentAiTier: AiTier = AiTier.BASIC,
     unlockedTiers: Set<AiTier> = setOf(AiTier.BASIC), // Tiers user has purchased
     onTierSelected: (AiTier) -> Unit = {}
 ) {
     var title by remember(scannedTitle) { mutableStateOf(scannedTitle ?: "") }
     var amount by remember(scannedAmount) { mutableStateOf(scannedAmount?.toString() ?: "") }
-    var selectedCategory by remember(scannedCategory) { mutableStateOf(scannedCategory ?: categories[0]) }
-    var notes by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf(categories[0]) }
+    
+    // Update category when AI scan returns a valid category
+    LaunchedEffect(scannedCategory) {
+        if (!scannedCategory.isNullOrBlank() && categories.contains(scannedCategory)) {
+            selectedCategory = scannedCategory
+        }
+    }
+
+    var notes by remember(scannedNote) { mutableStateOf(scannedNote ?: "") }
     var showCategoryDropdown by remember { mutableStateOf(false) }
     var selectedTier by remember { mutableStateOf(currentAiTier) }
 
@@ -286,6 +296,16 @@ private fun AiTierSelector(
     unlockedTiers: Set<AiTier>,
     onTierSelected: (AiTier) -> Unit
 ) {
+    val listState = rememberLazyListState()
+
+    // Auto-scroll to selected tier when it changes
+    LaunchedEffect(selectedTier) {
+        val index = AiTier.entries.indexOf(selectedTier)
+        if (index >= 0) {
+            listState.animateScrollToItem(index)
+        }
+    }
+
     Column {
         Text(
             text = "AI Model",
@@ -295,6 +315,7 @@ private fun AiTierSelector(
         )
         
         LazyRow(
+            state = listState,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(horizontal = 4.dp)
         ) {

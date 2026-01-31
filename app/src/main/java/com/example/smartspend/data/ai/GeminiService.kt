@@ -2,8 +2,10 @@ package com.example.smartspend.data.ai
 
 import android.util.Log
 import com.google.ai.client.generativeai.GenerativeModel
+import com.google.ai.client.generativeai.type.RequestOptions
 import com.google.ai.client.generativeai.type.generationConfig
 import kotlinx.serialization.Serializable
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.serialization.json.Json
 
 /**
@@ -312,7 +314,8 @@ class GeminiService(
         generationConfig = generationConfig {
             temperature = 0.1f // Very low for consistent JSON output
             maxOutputTokens = GeminiModels.getOutputLimit(tier.modelName)
-        }
+        },
+        requestOptions = RequestOptions(timeout = 60.seconds)
     )
     
     /** Current tier being used */
@@ -363,8 +366,13 @@ INSTRUCTIONS:
    - Investment (Stocks, Crypto, Gold, Savings)
    - Other (Services, Medical, Education)
 
+4. Extract a NOTE (Short Summary):
+   - List 2-3 main items purchased (e.g., "Latte, Croissant" or "Milk, Eggs, Bread").
+   - Keep it short (under 50 chars).
+   - If no specific items found, use "Purchase at Store Name".
+
 Return EXACTLY ONE JSON object with the TOTAL purchase:
-{"title":"Store Name","amount":123.45,"category":"Category"}
+{"title":"Store Name","amount":123.45,"category":"Category","note":"Short summary of items"}
 
 IMPORTANT: Return ONLY the raw JSON. No markdown formatting, no code blocks, no explanations."""
 
@@ -467,5 +475,6 @@ IMPORTANT: Return ONLY the raw JSON. No markdown formatting, no code blocks, no 
 data class ParsedExpense(
     val title: String,
     val amount: Double,
-    val category: String
+    val category: String,
+    val note: String? = null
 )
