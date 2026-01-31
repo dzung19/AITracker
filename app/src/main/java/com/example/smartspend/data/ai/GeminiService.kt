@@ -337,20 +337,36 @@ class GeminiService(
         val truncatedText = if (rawText.length > 2000) rawText.take(2000) else rawText
         
         // Improved prompt that's explicit about returning ONE summary JSON
-        val prompt = """You are a receipt parser. Analyze this receipt text and extract the TOTAL expense.
+        val prompt = """You are an expert receipt parser for Vietnamese and English receipts. Analyze this receipt text and extract the TOTAL expense.
 
 RECEIPT TEXT:
 $truncatedText
 
 INSTRUCTIONS:
-1. Find the STORE NAME (merchant name at top of receipt)
-2. Find the TOTAL AMOUNT (look for "Total", "Tổng", "Thành tiền", or the final/largest amount)
-3. Categorize as: Food, Transport, Shopping, Entertainment, Bills, or Other
+1. Find the STORE NAME (Merchant/Vendor):
+   - Usually the FIRST line of the receipt.
+   - Often in ALL CAPS.
+   - Ignore distinct common prefixes like "Chao mung", "Welcome", "Hoa don", "Receipt".
+   - If identifying a chain (e.g., Starbucks, Highland Coffee, Circle K, 7-Eleven, WinMart), use the brand name.
 
-Return EXACTLY ONE JSON object with the TOTAL purchase (not individual items):
+2. Find the TOTAL AMOUNT:
+   - Look for keywords: "Total", "Grand Total", "Tong", "Tong cong", "Thanh tien", "Phai thu".
+   - It is usually the largest amount or the final amount at the bottom.
+   - Ignore tax/VAT lines unless included in total.
+
+3. Categorize as ONE of: 
+   - Food (Restaurants, Coffee, Groceries, Supermarkets)
+   - Transport (Grab, Gas, Parking, Taxi)
+   - Shopping (Clothing, Electronics, Home goods)
+   - Entertainment (Movies, Games, Events)
+   - Bills (Electricity, Water, Internet, Phone)
+   - Investment (Stocks, Crypto, Gold, Savings)
+   - Other (Services, Medical, Education)
+
+Return EXACTLY ONE JSON object with the TOTAL purchase:
 {"title":"Store Name","amount":123.45,"category":"Category"}
 
-IMPORTANT: Return ONLY the JSON, no other text, no markdown, no multiple objects."""
+IMPORTANT: Return ONLY the raw JSON. No markdown formatting, no code blocks, no explanations."""
 
         return try {
             val response = model.generateContent(prompt)

@@ -41,6 +41,9 @@ fun SmartSpendNavHost(
     // Collect state from ViewModel
     val expenses by viewModel.expenses.collectAsState()
     val totalSpending by viewModel.totalSpending.collectAsState()
+    val currentDate by viewModel.currentDate.collectAsState()
+    val selectedPeriod by viewModel.selectedPeriod.collectAsState()
+    
     val isScanning by viewModel.isScanning.collectAsState()
     val scannedTitle by viewModel.scannedTitle.collectAsState()
     val scannedAmount by viewModel.scannedAmount.collectAsState()
@@ -82,6 +85,11 @@ fun SmartSpendNavHost(
             HomeScreen(
                 expenses = expenses,
                 totalSpending = totalSpending,
+                currentDate = currentDate,
+                selectedPeriod = selectedPeriod,
+                onPeriodSelected = { viewModel.setTimePeriod(it) },
+                onPreviousPeriod = { viewModel.previousPeriod() },
+                onNextPeriod = { viewModel.nextPeriod() },
                 onAddClick = { navController.navigate(Screen.AddExpense.route) },
                 onDeleteClick = { expense -> viewModel.deleteExpense(expense) }
             )

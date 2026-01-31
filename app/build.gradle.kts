@@ -6,8 +6,9 @@ plugins {
     alias(libs.plugins.kotlin.ksp)
     alias(libs.plugins.jetbrains.kotlin.serialization)
     alias(libs.plugins.jetbrains.kotlin.compose.compiler)
-    alias(libs.plugins.dagger.hilt.android)
 }
+
+apply(plugin = "com.google.dagger.hilt.android")
 
 // Read API key from local.properties
 val localProperties = Properties()
@@ -74,13 +75,14 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.material.icons.core)
 
     // Navigation
     implementation(libs.androidx.navigation.compose)
 
     // Hilt
     implementation(libs.hilt.android)
-    ksp(libs.hilt.android.compiler)
+    ksp(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
 
     // Room

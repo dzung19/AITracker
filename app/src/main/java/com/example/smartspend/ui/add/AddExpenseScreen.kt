@@ -41,7 +41,7 @@ private val AccentBlue = Color(0xFF60A5FA)
 private val TextPrimary = Color(0xFFFFFFFF)
 private val TextSecondary = Color(0xFFB0B0C0)
 
-val categories = listOf("Food", "Transport", "Shopping", "Entertainment", "Bills", "Other")
+val categories = listOf("Food", "Transport", "Shopping", "Entertainment", "Bills", "Investment", "Other")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

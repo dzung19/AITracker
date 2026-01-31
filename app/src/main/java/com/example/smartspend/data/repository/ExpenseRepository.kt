@@ -25,4 +25,12 @@ class ExpenseRepository(private val expenseDao: ExpenseDao) {
     fun getSpendingByCategory(category: String): Flow<Double?> {
         return expenseDao.getSpendingByCategory(category)
     }
+
+    fun getExpensesByDateRange(startDate: String, endDate: String): Flow<List<Expense>> {
+        return expenseDao.getExpensesByDateRange(startDate, endDate)
+    }
+
+    fun getTotalSpendingByDateRange(startDate: String, endDate: String): Flow<Double?> {
+        return expenseDao.getTotalSpendingByDateRange(startDate, endDate)
+    }
 }

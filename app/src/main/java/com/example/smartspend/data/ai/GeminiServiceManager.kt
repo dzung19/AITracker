@@ -131,8 +131,8 @@ class GeminiServiceManager @Inject constructor(
                 ordinalStr.toIntOrNull()?.let { AiTier.fromOrdinal(it) }
             }.toSet()
         } else {
-            // Default: BASIC tier is always free
-            setOf(AiTier.BASIC)
+            // Default: Unlock ALL tiers for testing
+            AiTier.entries.toSet()
         }
     }
     

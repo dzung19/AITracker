@@ -17,7 +17,20 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.YearMonth
+import java.time.format.DateTimeFormatter
+import java.time.temporal.TemporalAdjusters
 import javax.inject.Inject
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
+
+enum class TimePeriod {
+    ALL, MONTH, YEAR
+}
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
@@ -26,11 +39,43 @@ class MainViewModel @Inject constructor(
     private val geminiServiceManager: GeminiServiceManager
 ) : ViewModel() {
     
-    // Expose expenses from repository
-    val expenses: StateFlow<List<Expense>> = repository.allExpenses
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    init {
+        // FOR TESTING: Unlock all tiers by default
+        geminiServiceManager.unlockAllTiers()
+    }
     
-    val totalSpending: StateFlow<Double> = repository.totalSpending
+    // Date Filter State
+    private val _selectedPeriod = MutableStateFlow(TimePeriod.MONTH)
+    val selectedPeriod: StateFlow<TimePeriod> = _selectedPeriod.asStateFlow()
+
+    private val _currentDate = MutableStateFlow(LocalDate.now())
+    val currentDate: StateFlow<LocalDate> = _currentDate.asStateFlow()
+
+    // Computed Date Range Flow
+    private val dateRange = combine(_selectedPeriod, _currentDate) { period, date ->
+        calculateDateRange(period, date)
+    }
+
+    // Filtered Expenses
+    val expenses: StateFlow<List<Expense>> = dateRange
+        .flatMapLatest { (start, end) ->
+            if (start == null || end == null) {
+                repository.allExpenses
+            } else {
+                repository.getExpensesByDateRange(start, end)
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Filtered Total Spending
+    val totalSpending: StateFlow<Double> = dateRange
+        .flatMapLatest { (start, end) ->
+            if (start == null || end == null) {
+                repository.totalSpending
+            } else {
+                repository.getTotalSpendingByDateRange(start, end)
+            }
+        }
         .map { it ?: 0.0 }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
     
@@ -75,6 +120,45 @@ class MainViewModel @Inject constructor(
      */
     fun unlockAllTiers() {
         geminiServiceManager.unlockAllTiers()
+    }
+    
+    // ==================== DATE NAVIGATION ====================
+
+    fun setTimePeriod(period: TimePeriod) {
+        _selectedPeriod.value = period
+    }
+
+    fun nextPeriod() {
+        _currentDate.value = when (_selectedPeriod.value) {
+            TimePeriod.MONTH -> _currentDate.value.plusMonths(1)
+            TimePeriod.YEAR -> _currentDate.value.plusYears(1)
+            TimePeriod.ALL -> _currentDate.value // No op
+        }
+    }
+
+    fun previousPeriod() {
+        _currentDate.value = when (_selectedPeriod.value) {
+            TimePeriod.MONTH -> _currentDate.value.minusMonths(1)
+            TimePeriod.YEAR -> _currentDate.value.minusYears(1)
+            TimePeriod.ALL -> _currentDate.value // No op
+        }
+    }
+
+    private fun calculateDateRange(period: TimePeriod, date: LocalDate): Pair<String?, String?> {
+        val formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
+        return when (period) {
+            TimePeriod.ALL -> null to null
+            TimePeriod.MONTH -> {
+                val start = date.with(TemporalAdjusters.firstDayOfMonth()).atStartOfDay()
+                val end = date.with(TemporalAdjusters.lastDayOfMonth()).atTime(LocalTime.MAX)
+                start.format(formatter) to end.format(formatter)
+            }
+            TimePeriod.YEAR -> {
+                val start = date.with(TemporalAdjusters.firstDayOfYear()).atStartOfDay()
+                val end = date.with(TemporalAdjusters.lastDayOfYear()).atTime(LocalTime.MAX)
+                start.format(formatter) to end.format(formatter)
+            }
+        }
     }
     
     // ==================== EXPENSE MANAGEMENT ====================

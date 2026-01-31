@@ -24,6 +24,13 @@ import java.text.NumberFormat
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import java.time.LocalDate
+import java.time.YearMonth
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.foundation.clickable
+import com.example.smartspend.ui.TimePeriod
 
 // Premium Color Palette
 private val GradientStart = Color(0xFF667EEA)
@@ -39,6 +46,11 @@ private val TextSecondary = Color(0xFFB0B0C0)
 fun HomeScreen(
     expenses: List<Expense>,
     totalSpending: Double,
+    currentDate: LocalDate,
+    selectedPeriod: TimePeriod,
+    onPeriodSelected: (TimePeriod) -> Unit,
+    onPreviousPeriod: () -> Unit,
+    onNextPeriod: () -> Unit,
     onAddClick: () -> Unit,
     onDeleteClick: (Expense) -> Unit,
     modifier: Modifier = Modifier
@@ -69,7 +81,32 @@ fun HomeScreen(
             // Header with total spending
             item {
                 Spacer(modifier = Modifier.height(16.dp))
-                TotalSpendingCard(total = totalSpending, currencyFormatter = currencyFormatter)
+                
+                // Time Period Selector
+                PeriodSelector(
+                    selectedPeriod = selectedPeriod,
+                    onPeriodSelected = onPeriodSelected
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Date Navigator
+                if (selectedPeriod != TimePeriod.ALL) {
+                    DateNavigator(
+                        currentDate = currentDate,
+                        period = selectedPeriod,
+                        onPrevious = onPreviousPeriod,
+                        onNext = onNextPeriod
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                TotalSpendingCard(
+                    total = totalSpending, 
+                    currencyFormatter = currencyFormatter,
+                    period = selectedPeriod,
+                    date = currentDate
+                )
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
@@ -106,7 +143,18 @@ fun HomeScreen(
 }
 
 @Composable
-private fun TotalSpendingCard(total: Double, currencyFormatter: NumberFormat) {
+private fun TotalSpendingCard(
+    total: Double, 
+    currencyFormatter: NumberFormat,
+    period: TimePeriod,
+    date: LocalDate
+) {
+    val periodLabel = when (period) {
+        TimePeriod.ALL -> "All Time"
+        TimePeriod.MONTH -> date.format(DateTimeFormatter.ofPattern("MMMM yyyy"))
+        TimePeriod.YEAR -> date.format(DateTimeFormatter.ofPattern("yyyy"))
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -125,7 +173,7 @@ private fun TotalSpendingCard(total: Double, currencyFormatter: NumberFormat) {
         ) {
             Column {
                 Text(
-                    text = "Total Spending",
+                    text = "Total Spending ($periodLabel)",
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextPrimary.copy(alpha = 0.8f)
                 )
@@ -137,6 +185,84 @@ private fun TotalSpendingCard(total: Double, currencyFormatter: NumberFormat) {
                     color = TextPrimary
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun PeriodSelector(
+    selectedPeriod: TimePeriod,
+    onPeriodSelected: (TimePeriod) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp),
+        horizontalArrangement = Arrangement.Center
+    ) {
+        TimePeriod.entries.forEach { period ->
+            val isSelected = period == selectedPeriod
+            val backgroundColor = if (isSelected) AccentGreen else CardBackground
+            val textColor = if (isSelected) Color.Black else TextSecondary
+
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(backgroundColor)
+                    .clickable { onPeriodSelected(period) }
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    text = period.name.lowercase().capitalize(Locale.ROOT),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = textColor,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+        }
+    }
+}
+
+@Composable
+private fun DateNavigator(
+    currentDate: LocalDate,
+    period: TimePeriod,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit
+) {
+    val displayText = when (period) {
+        TimePeriod.MONTH -> currentDate.format(DateTimeFormatter.ofPattern("MMMM yyyy"))
+        TimePeriod.YEAR -> currentDate.format(DateTimeFormatter.ofPattern("yyyy"))
+        else -> ""
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onPrevious) {
+            Icon(
+                imageVector = Icons.Default.ArrowBack,
+                contentDescription = "Previous",
+                tint = TextSecondary
+            )
+        }
+        
+        Text(
+            text = displayText,
+            style = MaterialTheme.typography.titleMedium,
+            color = TextPrimary,
+            fontWeight = FontWeight.Bold
+        )
+        
+        IconButton(onClick = onNext) {
+            Icon(
+                imageVector = Icons.Default.ArrowForward,
+                contentDescription = "Next",
+                tint = TextSecondary
+            )
         }
     }
 }
@@ -213,6 +339,7 @@ private fun CategoryChip(category: String) {
         "shopping" -> Color(0xFFFFE66D)
         "entertainment" -> Color(0xFFA78BFA)
         "bills" -> Color(0xFFF472B6)
+        "investment" -> Color(0xFF22C55E)
         else -> Color(0xFF94A3B8)
     }
 
