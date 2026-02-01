@@ -19,6 +19,7 @@ import com.example.smartspend.ui.add.AddExpenseScreen
 import com.example.smartspend.ui.camera.CameraScreen
 import com.example.smartspend.ui.home.HomeScreen
 import com.example.smartspend.ui.detail.ExpenseDetailScreen
+import com.example.smartspend.ui.analytics.AnalyticsScreen
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 
@@ -32,6 +33,7 @@ sealed class Screen(val route: String) {
     data object ExpenseDetail : Screen("expense_detail/{expenseId}") {
         fun createRoute(expenseId: Long) = "expense_detail/$expenseId"
     }
+    data object Analytics : Screen("analytics")
 }
 
 /**
@@ -59,6 +61,10 @@ fun SmartSpendNavHost(
     
     // Selected Expense state
     val selectedExpense by viewModel.selectedExpense.collectAsState()
+
+    // Analytics State
+    val aiAnalysis by viewModel.aiAnalysis.collectAsState()
+    val isAnalyzing by viewModel.isAnalyzing.collectAsState()
     
     // AI Tier state
     val currentAiTier by viewModel.currentAiTier.collectAsState()
@@ -104,10 +110,22 @@ fun SmartSpendNavHost(
                 onDeleteClick = { expense -> viewModel.deleteExpense(expense) },
                 onExpenseClick = { expenseId ->
                     navController.navigate(Screen.ExpenseDetail.createRoute(expenseId))
-                }
+                },
+                onTotalClick = { navController.navigate(Screen.Analytics.route) }
             )
         }
         
+        // Analytics Screen
+        composable(Screen.Analytics.route) {
+            AnalyticsScreen(
+                expenses = expenses,
+                aiAnalysis = aiAnalysis,
+                isAnalyzing = isAnalyzing,
+                onNavigateBack = { navController.popBackStack() },
+                onAnalyzeClick = { viewModel.loadAiAnalysis(forceRefresh = true) }
+            )
+        }
+
         // Expense Detail Screen
         composable(
             route = Screen.ExpenseDetail.route,

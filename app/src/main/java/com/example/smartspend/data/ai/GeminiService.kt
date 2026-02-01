@@ -7,6 +7,7 @@ import com.google.ai.client.generativeai.type.generationConfig
 import kotlinx.serialization.Serializable
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.serialization.json.Json
+import com.example.smartspend.data.local.Expense
 
 /**
  * Model specification with token limits and rate limits
@@ -393,6 +394,51 @@ IMPORTANT: Return ONLY the raw JSON. No markdown formatting, no code blocks, no 
             }
         } catch (e: Exception) {
             Log.e("GeminiService", "Failed to parse receipt with ${tier.displayName}", e)
+            null
+        }
+    }
+
+    /**
+     * Analyzes a list of expenses and provides a financial summary.
+     */
+    suspend fun analyzeSpending(expenses: List<Expense>, period: String): String? {
+        if (expenses.isEmpty()) return "No expenses recorded for $period. Add some expenses to get insights! 📊"
+
+        // Use dynamic locale for currency formatting
+        val currencyFormat = java.text.NumberFormat.getCurrencyInstance(java.util.Locale.getDefault())
+        
+        val total = expenses.sumOf { it.amount }
+        val formattedTotal = currencyFormat.format(total)
+        
+        // Format: Category (Amount)
+        val categories = expenses.groupBy { it.category }
+            .mapValues { entry -> entry.value.sumOf { it.amount } }
+            .toList()
+            .sortedByDescending { it.second }
+            .take(3)
+            .joinToString(", ") { "${it.first} (${currencyFormat.format(it.second)})" }
+
+        val prompt = """You are a helpful financial advisor. Analyze this spending data for $period.
+        
+        DATA:
+        Total Spending: $formattedTotal
+        Top Categories: $categories
+        Count: ${expenses.size} expenses
+        
+        INSTRUCTIONS:
+        - Provide a brief summary of the spending habits.
+        - Point out any potential concerns (e.g. if one category dominates).
+        - Offer 1 specific, actionable tip for saving based on these categories.
+        - Keep it friendly, encouraging, and under 60 words.
+        - Use emojis to make it engaging.
+        
+        Response:"""
+
+        return try {
+             val response = model.generateContent(prompt)
+             response.text?.trim()
+        } catch (e: Exception) {
+            Log.e("GeminiService", "Analysis failed", e)
             null
         }
     }

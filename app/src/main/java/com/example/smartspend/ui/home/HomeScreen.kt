@@ -54,9 +54,10 @@ fun HomeScreen(
     onAddClick: () -> Unit,
     onDeleteClick: (Expense) -> Unit,
     onExpenseClick: (Long) -> Unit,
+    onTotalClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val currencyFormatter = remember { NumberFormat.getCurrencyInstance(Locale.US) }
+    val currencyFormatter = remember { NumberFormat.getCurrencyInstance(Locale.getDefault()) }
 
     Scaffold(
         containerColor = SurfaceBackground,
@@ -121,7 +122,8 @@ fun HomeScreen(
                     total = totalSpending, 
                     currencyFormatter = currencyFormatter,
                     period = selectedPeriod,
-                    date = currentDate
+                    date = currentDate,
+                    onClick = onTotalClick
                 )
                 Spacer(modifier = Modifier.height(8.dp))
             }
@@ -164,7 +166,8 @@ private fun TotalSpendingCard(
     total: Double, 
     currencyFormatter: NumberFormat,
     period: TimePeriod,
-    date: LocalDate
+    date: LocalDate,
+    onClick: () -> Unit
 ) {
     val periodLabel = when (period) {
         TimePeriod.ALL -> "All Time"
@@ -173,7 +176,9 @@ private fun TotalSpendingCard(
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {

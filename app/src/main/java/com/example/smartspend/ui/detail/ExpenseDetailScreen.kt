@@ -73,7 +73,7 @@ fun ExpenseDetailScreen(
 
 @Composable
 private fun ExpenseContent(expense: Expense, modifier: Modifier = Modifier) {
-    val currencyFormatter = remember { NumberFormat.getCurrencyInstance(Locale.US) }
+    val currencyFormatter = remember { NumberFormat.getCurrencyInstance(Locale.getDefault()) }
     val dateFormatter = remember { DateTimeFormatter.ofPattern("MMMM dd, yyyy • h:mm a") }
     val formattedDate = try {
         LocalDateTime.parse(expense.date).format(dateFormatter)

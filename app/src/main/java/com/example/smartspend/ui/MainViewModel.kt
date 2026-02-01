@@ -102,6 +102,13 @@ class MainViewModel @Inject constructor(
     private val _scanError = MutableStateFlow<String?>(null)
     val scanError: StateFlow<String?> = _scanError.asStateFlow()
 
+    // AI Analysis State
+    private val _aiAnalysis = MutableStateFlow<String?>(null)
+    val aiAnalysis: StateFlow<String?> = _aiAnalysis.asStateFlow()
+
+    private val _isAnalyzing = MutableStateFlow(false)
+    val isAnalyzing: StateFlow<Boolean> = _isAnalyzing.asStateFlow()
+
     // Selected Expense for Detail View
     private val _selectedExpense = MutableStateFlow<Expense?>(null)
     val selectedExpense: StateFlow<Expense?> = _selectedExpense.asStateFlow()
@@ -127,6 +134,48 @@ class MainViewModel @Inject constructor(
      */
     fun unlockAllTiers() {
         geminiServiceManager.unlockAllTiers()
+        geminiServiceManager.unlockAllTiers()
+    }
+    
+    init {
+        // FOR TESTING: Unlock all tiers by default
+        geminiServiceManager.unlockAllTiers()
+        
+        // Clear analysis when date range changes
+        viewModelScope.launch {
+            dateRange.collect {
+                _aiAnalysis.value = null
+            }
+        }
+    }
+    
+    // ==================== AI ANALYSIS ====================
+
+    fun loadAiAnalysis(forceRefresh: Boolean = false) {
+        val currentExpenses = expenses.value
+        if (currentExpenses.isEmpty()) {
+            _aiAnalysis.value = "No expenses to analyze."
+            return
+        }
+
+        val periodName = when(selectedPeriod.value) {
+            TimePeriod.MONTH -> currentDate.value.format(DateTimeFormatter.ofPattern("MMMM yyyy"))
+            TimePeriod.YEAR -> currentDate.value.format(DateTimeFormatter.ofPattern("yyyy"))
+            TimePeriod.ALL -> "All Time"
+        }
+
+        viewModelScope.launch {
+            _isAnalyzing.value = true
+            try {
+                val result = geminiServiceManager.analyzeSpending(currentExpenses, periodName, forceRefresh)
+                _aiAnalysis.value = result
+            } catch (e: Exception) {
+                Log.e("MainViewModel", "Analysis error", e)
+                _aiAnalysis.value = "Could not generate analysis. Please try again."
+            } finally {
+                _isAnalyzing.value = false
+            }
+        }
     }
     
     // ==================== DATE NAVIGATION ====================

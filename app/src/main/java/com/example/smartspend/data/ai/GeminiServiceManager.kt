@@ -2,6 +2,7 @@ package com.example.smartspend.data.ai
 
 import android.content.SharedPreferences
 import android.util.Log
+import com.example.smartspend.data.local.Expense
 import com.example.smartspend.di.GeminiApiKey
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,6 +35,12 @@ class GeminiServiceManager @Inject constructor(
     
     // Current GeminiService instance
     private var _geminiService: GeminiService? = null
+
+    // Cache for AI Summaries
+    private data class CacheEntry(val summary: String, val timestamp: Long)
+    private val _summaryCache = mutableMapOf<String, CacheEntry>()
+    // 7 Days in milliseconds
+    private val CACHE_EXPIRATION_MS = 7 * 24 * 60 * 60 * 1000L
     
     init {
         // Initialize service with current tier
@@ -97,6 +104,34 @@ class GeminiServiceManager @Inject constructor(
      */
     suspend fun parseReceipt(rawText: String): ParsedExpense? {
         return _geminiService?.parseReceiptText(rawText)
+    }
+
+    /**
+     * Analyze spending with caching strategy (7-day validity)
+     */
+    suspend fun analyzeSpending(expenses: List<Expense>, period: String, forceRefresh: Boolean = false): String? {
+        val currentTime = System.currentTimeMillis()
+        val cached = _summaryCache[period]
+
+        // Check cache validity
+        if (!forceRefresh && cached != null) {
+            val age = currentTime - cached.timestamp
+            if (age < CACHE_EXPIRATION_MS) {
+                Log.d(TAG, "Returning cached summary for $period (Age: ${age / 1000 / 60} min)")
+                return cached.summary
+            }
+        }
+
+        // Fetch fresh from AI
+        val result = _geminiService?.analyzeSpending(expenses, period)
+        
+        // Update cache if successful
+        if (result != null) {
+            _summaryCache[period] = CacheEntry(result, currentTime)
+            Log.d(TAG, "Cached new summary for $period")
+        }
+        
+        return result
     }
     
     // ==================== PRIVATE METHODS ====================
