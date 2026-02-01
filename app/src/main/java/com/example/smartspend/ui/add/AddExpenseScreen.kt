@@ -29,6 +29,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.smartspend.data.ai.AiTier
+import com.example.smartspend.data.local.Category
 
 // Premium Color Palette (same as HomeScreen)
 private val GradientStart = Color(0xFF667EEA)
@@ -42,7 +43,7 @@ private val AccentBlue = Color(0xFF60A5FA)
 private val TextPrimary = Color(0xFFFFFFFF)
 private val TextSecondary = Color(0xFFB0B0C0)
 
-val categories = listOf("Food", "Transport", "Shopping", "Entertainment", "Bills", "Investment", "Other")
+// val categories = listOf("Food", "Transport", "Shopping", "Entertainment", "Bills", "Investment", "Other") // Replaced by Category Enum
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,12 +63,12 @@ fun AddExpenseScreen(
 ) {
     var title by remember(scannedTitle) { mutableStateOf(scannedTitle ?: "") }
     var amount by remember(scannedAmount) { mutableStateOf(scannedAmount?.toString() ?: "") }
-    var selectedCategory by remember { mutableStateOf(categories[0]) }
+    var selectedCategory by remember { mutableStateOf(Category.FOOD) }
     
     // Update category when AI scan returns a valid category
     LaunchedEffect(scannedCategory) {
-        if (!scannedCategory.isNullOrBlank() && categories.contains(scannedCategory)) {
-            selectedCategory = scannedCategory
+        if (!scannedCategory.isNullOrBlank()) {
+            selectedCategory = Category.fromString(scannedCategory)
         }
     }
 
@@ -195,7 +196,7 @@ fun AddExpenseScreen(
                 onExpandedChange = { showCategoryDropdown = it }
             ) {
                 OutlinedTextField(
-                    value = selectedCategory,
+                    value = selectedCategory.displayName,
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("Category") },
@@ -218,9 +219,20 @@ fun AddExpenseScreen(
                     onDismissRequest = { showCategoryDropdown = false },
                     modifier = Modifier.background(CardBackground)
                 ) {
-                    categories.forEach { category ->
+                    Category.entries.forEach { category ->
                         DropdownMenuItem(
-                            text = { Text(category, color = TextPrimary) },
+                            text = { 
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(12.dp)
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(category.color)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(category.displayName, color = TextPrimary)
+                                }
+                            },
                             onClick = {
                                 selectedCategory = category
                                 showCategoryDropdown = false
@@ -262,7 +274,9 @@ fun AddExpenseScreen(
                 onClick = {
                     val parsedAmount = amount.toDoubleOrNull() ?: 0.0
                     if (title.isNotBlank() && parsedAmount > 0) {
-                        onSaveExpense(title, parsedAmount, selectedCategory, notes.ifBlank { null })
+                    if (title.isNotBlank() && parsedAmount > 0) {
+                        onSaveExpense(title, parsedAmount, selectedCategory.displayName, notes.ifBlank { null })
+                    }
                     }
                 },
                 modifier = Modifier

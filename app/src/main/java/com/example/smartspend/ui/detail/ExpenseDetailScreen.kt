@@ -183,15 +183,7 @@ private fun DetailRow(
 
 @Composable
 private fun CategoryChip(category: String) {
-    val chipColor = when (category.lowercase()) {
-        "food" -> Color(0xFFFF6B6B)
-        "transport" -> Color(0xFF4ECDC4)
-        "shopping" -> Color(0xFFFFE66D)
-        "entertainment" -> Color(0xFFA78BFA)
-        "bills" -> Color(0xFFF472B6)
-        "investment" -> Color(0xFF22C55E)
-        else -> Color(0xFF94A3B8)
-    }
+    val chipColor = com.example.smartspend.data.local.Category.fromString(category).color
 
     Surface(
         color = chipColor.copy(alpha = 0.2f),

@@ -25,11 +25,10 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.time.LocalDate
-import java.time.YearMonth
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import com.example.smartspend.data.local.Category.Companion.fromString
 import com.example.smartspend.ui.TimePeriod
 
 // Premium Color Palette
@@ -285,7 +284,7 @@ private fun DateNavigator(
             enabled = isNextEnabled
         ) {
             Icon(
-                imageVector = Icons.Default.ArrowForward,
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = "Next",
                 tint = if (isNextEnabled) TextPrimary else TextSecondary.copy(alpha = 0.3f)
             )
@@ -303,7 +302,7 @@ private fun ExpenseCard(
     val dateFormatter = remember { DateTimeFormatter.ofPattern("MMM dd, yyyy") }
     val formattedDate = try {
         LocalDateTime.parse(expense.date).format(dateFormatter)
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         expense.date
     }
 
@@ -362,15 +361,7 @@ private fun ExpenseCard(
 
 @Composable
 private fun CategoryChip(category: String) {
-    val chipColor = when (category.lowercase()) {
-        "food" -> Color(0xFFFF6B6B)
-        "transport" -> Color(0xFF4ECDC4)
-        "shopping" -> Color(0xFFFFE66D)
-        "entertainment" -> Color(0xFFA78BFA)
-        "bills" -> Color(0xFFF472B6)
-        "investment" -> Color(0xFF22C55E)
-        else -> Color(0xFF94A3B8)
-    }
+    val chipColor = fromString(category).color
 
     Box(
         modifier = Modifier
