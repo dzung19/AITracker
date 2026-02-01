@@ -16,6 +16,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.DateRange
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.PickVisualMediaRequest
+import android.net.Uri
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -59,8 +64,17 @@ fun AddExpenseScreen(
     scannedNote: String? = null,
     currentAiTier: AiTier = AiTier.BASIC,
     unlockedTiers: Set<AiTier> = setOf(AiTier.BASIC), // Tiers user has purchased
-    onTierSelected: (AiTier) -> Unit = {}
+    onTierSelected: (AiTier) -> Unit = {},
+    onScanGallery: (Uri) -> Unit = {}
 ) {
+    // Gallery Launcher
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            onScanGallery(uri)
+        }
+    }
     var title by remember(scannedTitle) { mutableStateOf(scannedTitle ?: "") }
     var amount by remember(scannedAmount) { mutableStateOf(scannedAmount?.toString() ?: "") }
     var selectedCategory by remember { mutableStateOf(Category.FOOD) }
@@ -122,6 +136,30 @@ fun AddExpenseScreen(
                 isScanning = isScanning,
                 selectedTier = selectedTier
             )
+            
+            // Gallery Button (Small, under Scan)
+            TextButton(
+                onClick = { 
+                    galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(36.dp),
+                enabled = !isScanning,
+                colors = ButtonDefaults.textButtonColors(contentColor = AccentGreen)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.DateRange,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Or pick from Gallery",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -274,7 +312,7 @@ fun AddExpenseScreen(
                 onClick = {
                     val parsedAmount = amount.toDoubleOrNull() ?: 0.0
                     if (title.isNotBlank() && parsedAmount > 0) {
-                    if (title.isNotBlank() && parsedAmount > 0) {
+                    if (title.isNotBlank()) {
                         onSaveExpense(title, parsedAmount, selectedCategory.displayName, notes.ifBlank { null })
                     }
                     }

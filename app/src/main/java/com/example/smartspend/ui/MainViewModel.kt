@@ -304,6 +304,60 @@ class MainViewModel @Inject constructor(
         }
     }
     
+    // Duplicate check state
+    private var lastProcessedUri: android.net.Uri? = null
+    
+    /**
+     * Process image from Gallery Uri
+     */
+    fun processReceiptUri(uri: android.net.Uri, context: android.content.Context) {
+        if (uri == lastProcessedUri) {
+            _scanError.value = "Image already processed. Please select a different one."
+            return
+        }
+        
+        lastProcessedUri = uri
+        _isScanning.value = true
+        _scanError.value = null
+        
+        val currentTier = geminiServiceManager.currentTier.value
+        
+        viewModelScope.launch {
+            try {
+                // Step 1: ML Kit OCR
+                Log.d("MainViewModel", "Step 1: Extracting text from URI...")
+                val rawText = receiptScanner.extractTextFromUri(context, uri)
+                
+                if (rawText.isBlank()) {
+                    _scanError.value = "No text found in image."
+                    _isScanning.value = false
+                    return@launch
+                }
+                
+                // Step 2: Gemini Parsing
+                if (geminiServiceManager.isConfigured) {
+                    val parsed = geminiServiceManager.parseReceipt(rawText)
+                    if (parsed != null) {
+                        _scannedTitle.value = parsed.title
+                        _scannedAmount.value = parsed.amount
+                        _scannedCategory.value = parsed.category
+                        _scannedNote.value = parsed.note
+                    } else {
+                        _scanError.value = "Could not parse receipt."
+                    }
+                } else {
+                    _scannedTitle.value = rawText.take(50)
+                    _scanError.value = "AI not configured. Using text."
+                }
+            } catch (e: Exception) {
+                Log.e("MainViewModel", "URI Scan failed", e)
+                _scanError.value = "Scan failed: ${e.message}"
+            } finally {
+                _isScanning.value = false
+            }
+        }
+    }
+    
     fun clearScannedData() {
         _scannedTitle.value = null
         _scannedAmount.value = null

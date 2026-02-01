@@ -185,6 +185,9 @@ fun SmartSpendNavHost(
                 unlockedTiers = unlockedTiers,
                 onTierSelected = { tier ->
                     viewModel.selectAiTier(tier)
+                },
+                onScanGallery = { uri ->
+                    viewModel.processReceiptUri(uri, context)
                 }
             )
         }

@@ -8,6 +8,8 @@ import androidx.camera.core.ImageProxy
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import android.content.Context
+import android.net.Uri
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -71,6 +73,31 @@ class ReceiptScannerService {
             Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
         } else {
             bitmap
+        }
+    }
+    
+    /**
+     * Extracts text from a Uri (Gallery Image).
+     */
+    suspend fun extractTextFromUri(context: Context, uri: Uri): String {
+        return suspendCancellableCoroutine { continuation ->
+            try {
+                val inputImage = InputImage.fromFilePath(context, uri)
+                
+                textRecognizer.process(inputImage)
+                    .addOnSuccessListener { visionText ->
+                        val extractedText = visionText.text
+                        Log.d("ReceiptScanner", "Extracted text from URI: $extractedText")
+                        continuation.resume(extractedText)
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e("ReceiptScanner", "Text recognition failed for URI", e)
+                        continuation.resumeWithException(e)
+                    }
+            } catch (e: Exception) {
+                Log.e("ReceiptScanner", "Error processing URI", e)
+                continuation.resumeWithException(e)
+            }
         }
     }
     
