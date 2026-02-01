@@ -101,6 +101,10 @@ class MainViewModel @Inject constructor(
     
     private val _scanError = MutableStateFlow<String?>(null)
     val scanError: StateFlow<String?> = _scanError.asStateFlow()
+
+    // Selected Expense for Detail View
+    private val _selectedExpense = MutableStateFlow<Expense?>(null)
+    val selectedExpense: StateFlow<Expense?> = _selectedExpense.asStateFlow()
     
     // ==================== AI TIER MANAGEMENT ====================
     
@@ -183,6 +187,16 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             repository.delete(expense)
         }
+    }
+
+    fun getExpense(id: Long) {
+        viewModelScope.launch {
+            _selectedExpense.value = repository.getById(id)
+        }
+    }
+
+    fun clearSelectedExpense() {
+        _selectedExpense.value = null
     }
     
     // ==================== RECEIPT SCANNING ====================

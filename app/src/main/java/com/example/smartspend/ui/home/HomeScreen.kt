@@ -53,6 +53,7 @@ fun HomeScreen(
     onNextPeriod: () -> Unit,
     onAddClick: () -> Unit,
     onDeleteClick: (Expense) -> Unit,
+    onExpenseClick: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val currencyFormatter = remember { NumberFormat.getCurrencyInstance(Locale.US) }
@@ -145,7 +146,8 @@ fun HomeScreen(
                     ExpenseCard(
                         expense = expense,
                         currencyFormatter = currencyFormatter,
-                        onDelete = { onDeleteClick(expense) }
+                        onDelete = { onDeleteClick(expense) },
+                        onClick = { onExpenseClick(expense.id) }
                     )
                 }
             }
@@ -290,7 +292,8 @@ private fun DateNavigator(
 private fun ExpenseCard(
     expense: Expense,
     currencyFormatter: NumberFormat,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onClick: () -> Unit
 ) {
     val dateFormatter = remember { DateTimeFormatter.ofPattern("MMM dd, yyyy") }
     val formattedDate = try {
@@ -300,7 +303,9 @@ private fun ExpenseCard(
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = CardBackground)
     ) {

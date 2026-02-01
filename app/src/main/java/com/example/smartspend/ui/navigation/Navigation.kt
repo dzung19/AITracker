@@ -18,6 +18,9 @@ import com.example.smartspend.ui.MainViewModel
 import com.example.smartspend.ui.add.AddExpenseScreen
 import com.example.smartspend.ui.camera.CameraScreen
 import com.example.smartspend.ui.home.HomeScreen
+import com.example.smartspend.ui.detail.ExpenseDetailScreen
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 
 /**
  * Navigation routes for the app
@@ -26,6 +29,9 @@ sealed class Screen(val route: String) {
     data object Home : Screen("home")
     data object AddExpense : Screen("add_expense")
     data object Camera : Screen("camera")
+    data object ExpenseDetail : Screen("expense_detail/{expenseId}") {
+        fun createRoute(expenseId: Long) = "expense_detail/$expenseId"
+    }
 }
 
 /**
@@ -50,6 +56,9 @@ fun SmartSpendNavHost(
     val scannedCategory by viewModel.scannedCategory.collectAsState()
     val scannedNote by viewModel.scannedNote.collectAsState()
     val scanError by viewModel.scanError.collectAsState()
+    
+    // Selected Expense state
+    val selectedExpense by viewModel.selectedExpense.collectAsState()
     
     // AI Tier state
     val currentAiTier by viewModel.currentAiTier.collectAsState()
@@ -92,7 +101,33 @@ fun SmartSpendNavHost(
                 onPreviousPeriod = { viewModel.previousPeriod() },
                 onNextPeriod = { viewModel.nextPeriod() },
                 onAddClick = { navController.navigate(Screen.AddExpense.route) },
-                onDeleteClick = { expense -> viewModel.deleteExpense(expense) }
+                onDeleteClick = { expense -> viewModel.deleteExpense(expense) },
+                onExpenseClick = { expenseId ->
+                    navController.navigate(Screen.ExpenseDetail.createRoute(expenseId))
+                }
+            )
+        }
+        
+        // Expense Detail Screen
+        composable(
+            route = Screen.ExpenseDetail.route,
+            arguments = listOf(navArgument("expenseId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val expenseId = backStackEntry.arguments?.getLong("expenseId")
+            
+            // Load expense when entering screen
+            LaunchedEffect(expenseId) {
+                if (expenseId != null) {
+                    viewModel.getExpense(expenseId)
+                }
+            }
+            
+            ExpenseDetailScreen(
+                expense = selectedExpense,
+                onNavigateBack = {
+                    viewModel.clearSelectedExpense()
+                    navController.popBackStack()
+                }
             )
         }
         
