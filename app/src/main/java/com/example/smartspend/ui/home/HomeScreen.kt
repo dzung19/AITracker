@@ -9,6 +9,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Menu
+import kotlinx.coroutines.launch
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -54,107 +58,197 @@ fun HomeScreen(
     onDeleteClick: (Expense) -> Unit,
     onExpenseClick: (Long) -> Unit,
     onTotalClick: () -> Unit,
+    onTierManagementClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val currencyFormatter = remember { NumberFormat.getCurrencyInstance(Locale.getDefault()) }
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
 
-    Scaffold(
-        containerColor = SurfaceBackground,
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onAddClick,
-                containerColor = AccentGreen,
-                contentColor = Color.Black,
-                shape = CircleShape,
-                modifier = Modifier.size(64.dp)
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet(
+                drawerContainerColor = CardBackground,
+                drawerContentColor = TextPrimary,
+                modifier = Modifier.width(300.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Expense", modifier = Modifier.size(28.dp))
+                Spacer(modifier = Modifier.height(24.dp))
+                // Drawer Header
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "SmartSpend",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = AccentGreen
+                    )
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 24.dp), color = TextSecondary.copy(alpha = 0.2f))
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Navigation Items
+                NavigationDrawerItem(
+                    label = { Text("Home") },
+                    selected = true,
+                    onClick = { scope.launch { drawerState.close() } },
+                    icon = { Icon(Icons.Default.Home, contentDescription = null) },
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                    colors = NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = AccentGreen.copy(alpha = 0.2f),
+                        selectedIconColor = AccentGreen,
+                        selectedTextColor = AccentGreen,
+                        unselectedIconColor = TextSecondary,
+                        unselectedTextColor = TextSecondary
+                    )
+                )
+
+                NavigationDrawerItem(
+                    label = { Text("Tier Management") },
+                    selected = false,
+                    onClick = { 
+                        scope.launch { 
+                            drawerState.close() 
+                            onTierManagementClick() 
+                        } 
+                    },
+                    icon = { Icon(Icons.Default.Star, contentDescription = null) }, // Magic/Star icon
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                    colors = NavigationDrawerItemDefaults.colors(
+                        unselectedIconColor = TextSecondary,
+                        unselectedTextColor = TextSecondary
+                    )
+                )
             }
         }
-    ) { padding ->
-        LazyColumn(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // Header with total spending
-            item {
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                // Time Period Selector
-                PeriodSelector(
-                    selectedPeriod = selectedPeriod,
-                    onPeriodSelected = onPeriodSelected
+    ) {
+        Scaffold(
+            containerColor = SurfaceBackground,
+            topBar = {
+                CenterAlignedTopAppBar(
+                    title = {
+                        Text(
+                            text = "SmartSpend",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            Icon(
+                                imageVector = Icons.Default.Menu,
+                                contentDescription = "Menu",
+                                tint = TextPrimary
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = SurfaceBackground
+                    )
                 )
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                // Date Navigator
-                if (selectedPeriod != TimePeriod.ALL) {
-                    val isNextEnabled = when (selectedPeriod) {
-                        TimePeriod.MONTH -> {
-                            val nextMonth = currentDate.plusMonths(1)
-                            val now = LocalDate.now()
-                            !nextMonth.withDayOfMonth(1).isAfter(now.withDayOfMonth(1))
+            },
+            floatingActionButton = {
+                FloatingActionButton(
+                    onClick = onAddClick,
+                    containerColor = AccentGreen,
+                    contentColor = Color.Black,
+                    shape = CircleShape,
+                    modifier = Modifier.size(64.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Add Expense", modifier = Modifier.size(28.dp))
+                }
+            }
+        ) { padding ->
+            LazyColumn(
+                modifier = modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Header with total spending
+                item {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    // Time Period Selector
+                    PeriodSelector(
+                        selectedPeriod = selectedPeriod,
+                        onPeriodSelected = onPeriodSelected
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Date Navigator
+                    if (selectedPeriod != TimePeriod.ALL) {
+                        val isNextEnabled = when (selectedPeriod) {
+                            TimePeriod.MONTH -> {
+                                val nextMonth = currentDate.plusMonths(1)
+                                val now = LocalDate.now()
+                                !nextMonth.withDayOfMonth(1).isAfter(now.withDayOfMonth(1))
+                            }
+                            TimePeriod.YEAR -> {
+                                val nextYear = currentDate.plusYears(1)
+                                val now = LocalDate.now()
+                                nextYear.year <= now.year
+                            }
+                            else -> true
                         }
-                        TimePeriod.YEAR -> {
-                            val nextYear = currentDate.plusYears(1)
-                            val now = LocalDate.now()
-                            nextYear.year <= now.year
-                        }
-                        else -> true
+
+                        DateNavigator(
+                            currentDate = currentDate,
+                            period = selectedPeriod,
+                            onPrevious = onPreviousPeriod,
+                            onNext = onNextPeriod,
+                            isNextEnabled = isNextEnabled
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
 
-                    DateNavigator(
-                        currentDate = currentDate,
-                        period = selectedPeriod,
-                        onPrevious = onPreviousPeriod,
-                        onNext = onNextPeriod,
-                        isNextEnabled = isNextEnabled
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-
-                TotalSpendingCard(
-                    total = totalSpending, 
-                    currencyFormatter = currencyFormatter,
-                    period = selectedPeriod,
-                    date = currentDate,
-                    onClick = onTotalClick
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-
-            // Section title
-            item {
-                Text(
-                    text = "Recent Expenses",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = TextSecondary,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
-            }
-
-            // Expense Items
-            if (expenses.isEmpty()) {
-                item {
-                    EmptyStateCard()
-                }
-            } else {
-                items(expenses, key = { it.id }) { expense ->
-                    ExpenseCard(
-                        expense = expense,
+                    TotalSpendingCard(
+                        total = totalSpending, 
                         currencyFormatter = currencyFormatter,
-                        onDelete = { onDeleteClick(expense) },
-                        onClick = { onExpenseClick(expense.id) }
+                        period = selectedPeriod,
+                        date = currentDate,
+                        onClick = onTotalClick
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                // Section title
+                item {
+                    Text(
+                        text = "Recent Expenses",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = TextSecondary,
+                        modifier = Modifier.padding(vertical = 8.dp)
                     )
                 }
-            }
 
-            item {
-                Spacer(modifier = Modifier.height(80.dp)) // Space for FAB
+                // Expense Items
+                if (expenses.isEmpty()) {
+                    item {
+                        EmptyStateCard()
+                    }
+                } else {
+                    items(expenses, key = { it.id }) { expense ->
+                        ExpenseCard(
+                            expense = expense,
+                            currencyFormatter = currencyFormatter,
+                            onDelete = { onDeleteClick(expense) },
+                            onClick = { onExpenseClick(expense.id) }
+                        )
+                    }
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(80.dp)) // Space for FAB
+                }
             }
         }
     }

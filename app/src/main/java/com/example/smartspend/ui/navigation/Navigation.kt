@@ -22,6 +22,7 @@ import com.example.smartspend.ui.detail.ExpenseDetailScreen
 import com.example.smartspend.ui.analytics.AnalyticsScreen
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import com.example.smartspend.ui.tier.TierManagementScreen
 
 /**
  * Navigation routes for the app
@@ -34,6 +35,7 @@ sealed class Screen(val route: String) {
         fun createRoute(expenseId: Long) = "expense_detail/$expenseId"
     }
     data object Analytics : Screen("analytics")
+    data object TierManagement : Screen("tier_management")
 }
 
 /**
@@ -111,7 +113,18 @@ fun SmartSpendNavHost(
                 onExpenseClick = { expenseId ->
                     navController.navigate(Screen.ExpenseDetail.createRoute(expenseId))
                 },
-                onTotalClick = { navController.navigate(Screen.Analytics.route) }
+                onTotalClick = { navController.navigate(Screen.Analytics.route) },
+                onTierManagementClick = { navController.navigate(Screen.TierManagement.route) }
+            )
+        }
+        
+        // Tier Management Screen
+        composable(Screen.TierManagement.route) {
+            TierManagementScreen(
+                currentTier = currentAiTier,
+                unlockedTiers = unlockedTiers,
+                onTierSelected = { viewModel.selectAiTier(it) },
+                onNavigateBack = { navController.popBackStack() }
             )
         }
         
