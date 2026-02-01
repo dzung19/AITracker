@@ -15,7 +15,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class GeminiServiceManager @Inject constructor(
-    @GeminiApiKey private val apiKey: String,
+    @param:GeminiApiKey private val apiKey: String,
     private val prefs: SharedPreferences
 ) {
     companion object {
