@@ -92,11 +92,26 @@ fun HomeScreen(
                 
                 // Date Navigator
                 if (selectedPeriod != TimePeriod.ALL) {
+                    val isNextEnabled = when (selectedPeriod) {
+                        TimePeriod.MONTH -> {
+                            val nextMonth = currentDate.plusMonths(1)
+                            val now = LocalDate.now()
+                            !nextMonth.withDayOfMonth(1).isAfter(now.withDayOfMonth(1))
+                        }
+                        TimePeriod.YEAR -> {
+                            val nextYear = currentDate.plusYears(1)
+                            val now = LocalDate.now()
+                            nextYear.year <= now.year
+                        }
+                        else -> true
+                    }
+
                     DateNavigator(
                         currentDate = currentDate,
                         period = selectedPeriod,
                         onPrevious = onPreviousPeriod,
-                        onNext = onNextPeriod
+                        onNext = onNextPeriod,
+                        isNextEnabled = isNextEnabled
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                 }
@@ -229,7 +244,8 @@ private fun DateNavigator(
     currentDate: LocalDate,
     period: TimePeriod,
     onPrevious: () -> Unit,
-    onNext: () -> Unit
+    onNext: () -> Unit,
+    isNextEnabled: Boolean = true
 ) {
     val displayText = when (period) {
         TimePeriod.MONTH -> currentDate.format(DateTimeFormatter.ofPattern("MMMM yyyy"))
@@ -246,7 +262,7 @@ private fun DateNavigator(
             Icon(
                 imageVector = Icons.Default.ArrowBack,
                 contentDescription = "Previous",
-                tint = TextSecondary
+                tint = TextPrimary
             )
         }
         
@@ -257,11 +273,14 @@ private fun DateNavigator(
             fontWeight = FontWeight.Bold
         )
         
-        IconButton(onClick = onNext) {
+        IconButton(
+            onClick = onNext,
+            enabled = isNextEnabled
+        ) {
             Icon(
                 imageVector = Icons.Default.ArrowForward,
                 contentDescription = "Next",
-                tint = TextSecondary
+                tint = if (isNextEnabled) TextPrimary else TextSecondary.copy(alpha = 0.3f)
             )
         }
     }
