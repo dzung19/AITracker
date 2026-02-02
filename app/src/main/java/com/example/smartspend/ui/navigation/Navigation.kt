@@ -22,7 +22,20 @@ import com.example.smartspend.ui.detail.ExpenseDetailScreen
 import com.example.smartspend.ui.analytics.AnalyticsScreen
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import androidx.lifecycle.Lifecycle
+import androidx.navigation.NavBackStackEntry
 import com.example.smartspend.ui.tier.TierManagementScreen
+
+/**
+ * Extension to safely pop back stack only if the current entry is resumed.
+ * This prevents double navigation issues (white screen) when clicking back fast.
+ */
+fun NavHostController.safePopBackStack() {
+    val currentEntry = currentBackStackEntry
+    if (currentEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) {
+        popBackStack()
+    }
+}
 
 /**
  * Navigation routes for the app
@@ -124,7 +137,7 @@ fun SmartSpendNavHost(
                 currentTier = currentAiTier,
                 unlockedTiers = unlockedTiers,
                 onTierSelected = { viewModel.selectAiTier(it) },
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.safePopBackStack() }
             )
         }
         
@@ -134,7 +147,7 @@ fun SmartSpendNavHost(
                 expenses = expenses,
                 aiAnalysis = aiAnalysis,
                 isAnalyzing = isAnalyzing,
-                onNavigateBack = { navController.popBackStack() },
+                onNavigateBack = { navController.safePopBackStack() },
                 onAnalyzeClick = { viewModel.loadAiAnalysis(forceRefresh = true) }
             )
         }
@@ -157,7 +170,7 @@ fun SmartSpendNavHost(
                 expense = selectedExpense,
                 onNavigateBack = {
                     viewModel.clearSelectedExpense()
-                    navController.popBackStack()
+                    navController.safePopBackStack()
                 }
             )
         }
@@ -167,7 +180,7 @@ fun SmartSpendNavHost(
             AddExpenseScreen(
                 onNavigateBack = { 
                     viewModel.clearScannedData()
-                    navController.popBackStack()
+                    navController.safePopBackStack()
                 },
                 onSaveExpense = { title, amount, category, notes ->
                     viewModel.addExpense(title, amount, category, notes)
@@ -211,10 +224,10 @@ fun SmartSpendNavHost(
                 onImageCaptured = { imageProxy ->
                     viewModel.processReceiptImage(imageProxy)
                     // Navigate back to AddExpense after capturing
-                    navController.popBackStack()
+                    navController.safePopBackStack()
                 },
                 onClose = { 
-                    navController.popBackStack()
+                    navController.safePopBackStack()
                 }
             )
         }

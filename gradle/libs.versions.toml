@@ -62,6 +62,8 @@ androidx-navigation-runtime-ktx = { group = "androidx.navigation", name = "navig
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
 androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
+tensorflow-lite-task-text = { group = "org.tensorflow", name = "tensorflow-lite-task-text", version = "0.4.4" }
+tensorflow-lite-gpu = { group = "org.tensorflow", name = "tensorflow-lite-gpu", version = "2.16.1" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

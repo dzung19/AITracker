@@ -15,30 +15,42 @@ data class ChatMessage(
 )
 
 @Singleton
-class ChatService @Inject constructor() {
+class ChatService @Inject constructor(
+    private val intentClassifier: IntentClassifier
+) {
 
     private val currencyFormat = NumberFormat.getCurrencyInstance(Locale.getDefault())
 
     suspend fun generateResponse(message: String, expense: Expense): ChatMessage {
-        // Simulate network/processing delay for "AI" feel
-        delay(800)
-        
-        val lowerMessage = message.lowercase()
-        val responseText = when {
-            lowerMessage.contains("high") || lowerMessage.contains("expensive") -> {
-                analyzeExpenseCost(expense)
-            }
-            lowerMessage.contains("save") || lowerMessage.contains("reduce") -> {
-                provideSavingTip(expense)
-            }
-            lowerMessage.contains("judge") || lowerMessage.contains("bad") -> {
-                judgementalBot(expense)
-            }
-            else -> {
-                "I see you spent ${currencyFormat.format(expense.amount)} on ${expense.title}. You can ask me if this is 'expensive', how to 'save' money, or for my 'judge'ment! 🤖"
-            }
+        // ... (existing single expense logic)
+        delay(600)
+        val intent = intentClassifier.classify(message)
+        val responseText = when (intent) {
+            "analyze_cost" -> analyzeExpenseCost(expense)
+            "saving_tip" -> provideSavingTip(expense)
+            "judgement" -> judgementalBot(expense)
+            "greeting" -> "Hello! I'm ready to analyze your spending on ${expense.title}. 🤖"
+            else -> "I see you spent ${currencyFormat.format(expense.amount)} on ${expense.title}. Ask me if this is 'expensive', how to 'save', or for a 'judgement'! 🧠"
         }
+        return ChatMessage(text = responseText, isUser = false)
+    }
+
+    suspend fun generateAnalyticsResponse(message: String, expenses: List<Expense>): ChatMessage {
+        delay(800)
+        val intent = intentClassifier.classify(message)
         
+        val total = expenses.sumOf { it.amount }
+        val topCategory = expenses.groupBy { it.category }
+            .maxByOrNull { it.value.sumOf { exp -> exp.amount } }
+            ?.key ?: "None"
+            
+        val responseText = when (intent) {
+            "analyze_cost" -> "You've spent a total of ${currencyFormat.format(total)} in this period. Your highest spending category is $topCategory."
+            "saving_tip" -> "Since $topCategory is your biggest expense, try setting a stricter budget for it! small habits add up. 📉"
+            "judgement" -> if (total > 1000) "Wow! ${currencyFormat.format(total)}? Someone's been enjoying life a bit too much... 💸" else "Only ${currencyFormat.format(total)}? You're a saving machine! 🤖"
+            "greeting" -> "Hi! I'm looking at your spending for this period. Total: ${currencyFormat.format(total)}. Ask me for insights! 📊"
+            else -> "I analyzed ${expenses.size} transactions. Total: ${currencyFormat.format(total)}. Top Category: $topCategory. Ask me how to save! 💡"
+        }
         return ChatMessage(text = responseText, isUser = false)
     }
 

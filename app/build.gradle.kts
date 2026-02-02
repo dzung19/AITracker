@@ -100,6 +100,8 @@ dependencies {
     // AI & ML
     implementation(libs.google.ai.client.generativeai)
     implementation(libs.google.mlkit.text.recognition)
+    implementation(libs.tensorflow.lite.task.text)
+    implementation(libs.tensorflow.lite.gpu)
 
     // Serialization
     implementation(libs.kotlinx.serialization.json)

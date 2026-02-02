@@ -32,6 +32,22 @@ import androidx.compose.ui.graphics.Paint
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+import androidx.compose.ui.geometry.Size
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import com.example.smartspend.data.chat.ChatMessage
+import com.example.smartspend.data.chat.ChatService
+import kotlinx.coroutines.launch
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.draw.clip
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.ui.platform.LocalContext
 
 // Reusing colors
 private val SurfaceBackground = Color(0xFF121218)
@@ -50,6 +66,15 @@ fun AnalyticsScreen(
     onNavigateBack: () -> Unit,
     onAnalyzeClick: () -> Unit
 ) {
+    val context = LocalContext.current
+    val chatService = remember {
+        val classifier = com.example.smartspend.data.chat.IntentClassifier(context)
+        ChatService(classifier)
+    }
+    var showBottomSheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState()
+    val scope = rememberCoroutineScope()
+
     Scaffold(
         containerColor = SurfaceBackground,
         topBar = {
@@ -68,6 +93,20 @@ fun AnalyticsScreen(
                     containerColor = SurfaceBackground
                 )
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { showBottomSheet = true },
+                containerColor = AccentGreen,
+                contentColor = Color.Black,
+                shape = CircleShape
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Star, // AI Icon
+                    contentDescription = "Chat with AI",
+                    modifier = Modifier.size(28.dp)
+                )
+            }
         }
     ) { padding ->
         Column(
@@ -104,6 +143,20 @@ fun AnalyticsScreen(
                 isLoading = isAnalyzing,
                 onAnalyze = onAnalyzeClick
             )
+        }
+
+        if (showBottomSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showBottomSheet = false },
+                sheetState = sheetState,
+                containerColor = CardBackground,
+                contentColor = TextPrimary 
+            ) {
+               AnalyticsChatBottomSheetContent(
+                   expenses = expenses, 
+                   chatService = chatService
+               )
+            }
         }
     }
 }
@@ -335,6 +388,150 @@ fun AiAnalysisCard(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun AnalyticsChatBottomSheetContent(
+    expenses: List<Expense>,
+    chatService: ChatService
+) {
+    val totalFormat = java.text.NumberFormat.getCurrencyInstance().format(expenses.sumOf { it.amount })
+    var messages by remember { mutableStateOf(listOf(
+        ChatMessage(
+            text = "Hi! I've analyzed your ${expenses.size} transactions. Total spending: $totalFormat. detecting patterns... 🤖", 
+            isUser = false
+        )
+    )) }
+    var inputText by remember { mutableStateOf("") }
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(500.dp)
+            .padding(16.dp)
+    ) {
+        // Chat List
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(messages) { msg ->
+                ChatBubble(message = msg)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Input Area
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value = inputText,
+                onValueChange = { inputText = it },
+                modifier = Modifier.weight(1f),
+                placeholder = { Text("Ask for insights...", color = TextSecondary) },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = TextPrimary,
+                    unfocusedTextColor = TextPrimary,
+                    cursorColor = AccentGreen,
+                    focusedBorderColor = AccentGreen,
+                    unfocusedBorderColor = TextSecondary
+                ),
+                shape = RoundedCornerShape(24.dp),
+                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Send),
+                keyboardActions = KeyboardActions(onDone = {
+                    if (inputText.isNotBlank()) {
+                        val userMsg = ChatMessage(text = inputText, isUser = true)
+                        messages = messages + userMsg
+                        val query = inputText
+                        inputText = ""
+                        focusManager.clearFocus()
+                        
+                        scope.launch { listState.animateScrollToItem(messages.size - 1) }
+
+                        // Get AI Response (Analytics)
+                        scope.launch {
+                            val response = chatService.generateAnalyticsResponse(query, expenses)
+                            messages = messages + response
+                            listState.animateScrollToItem(messages.size - 1)
+                        }
+                    }
+                })
+            )
+            
+            Spacer(modifier = Modifier.width(8.dp))
+            
+            IconButton(
+                onClick = {
+                    if (inputText.isNotBlank()) {
+                        val userMsg = ChatMessage(text = inputText, isUser = true)
+                        messages = messages + userMsg
+                        val query = inputText
+                        inputText = ""
+                        focusManager.clearFocus()
+                        
+                        scope.launch { listState.animateScrollToItem(messages.size - 1) }
+
+                        scope.launch {
+                            val response = chatService.generateAnalyticsResponse(query, expenses)
+                            messages = messages + response
+                            listState.animateScrollToItem(messages.size - 1)
+                        }
+                    }
+                },
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(AccentGreen, CircleShape)
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = "Send",
+                    tint = Color.Black
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+fun ChatBubble(message: ChatMessage) {
+    val bubbleColor = if (message.isUser) AccentGreen else Color(0xFF2A2A35)
+    val textColor = if (message.isUser) Color.Black else TextPrimary
+    val alignment = if (message.isUser) Alignment.End else Alignment.Start
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = alignment
+    ) {
+        Box(
+            modifier = Modifier
+                .clip(
+                    RoundedCornerShape(
+                        topStart = 16.dp, 
+                        topEnd = 16.dp, 
+                        bottomStart = if (message.isUser) 16.dp else 4.dp,
+                        bottomEnd = if (message.isUser) 4.dp else 16.dp
+                    )
+                )
+                .background(bubbleColor)
+                .padding(12.dp)
+        ) {
+            Text(
+                text = message.text, 
+                color = textColor,
+                style = MaterialTheme.typography.bodyMedium
+            )
         }
     }
 }
