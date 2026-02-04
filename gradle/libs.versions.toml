@@ -19,6 +19,7 @@ kotlinxSerialization = "1.6.3"
 navigationRuntimeKtx = "2.9.6"
 hilt = "2.57.1"
 hiltNavigationCompose = "1.2.0"
+mediaPipe = "0.10.14"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -53,6 +54,7 @@ androidx-camera-view = { group = "androidx.camera", name = "camera-view", versio
 # AI / ML
 google-ai-client-generativeai = { group = "com.google.ai.client.generativeai", name = "generativeai", version.ref = "generativeai" }
 google-mlkit-text-recognition = { group = "com.google.android.gms", name = "play-services-mlkit-text-recognition", version.ref = "mlkitText" }
+mediapipe-tasks-text = { group = "com.google.mediapipe", name = "tasks-text", version.ref = "mediaPipe" }
 
 # Serialization
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
@@ -62,7 +64,6 @@ androidx-navigation-runtime-ktx = { group = "androidx.navigation", name = "navig
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
 androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
-tensorflow-lite-task-text = { group = "org.tensorflow", name = "tensorflow-lite-task-text", version = "0.4.4" }
 tensorflow-lite-gpu = { group = "org.tensorflow", name = "tensorflow-lite-gpu", version = "2.16.1" }
 
 [plugins]

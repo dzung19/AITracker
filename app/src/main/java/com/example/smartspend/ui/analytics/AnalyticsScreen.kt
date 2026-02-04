@@ -45,9 +45,16 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.SuggestionChipDefaults
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.ui.platform.LocalContext
 
 // Reusing colors
 private val SurfaceBackground = Color(0xFF121218)
@@ -63,14 +70,11 @@ fun AnalyticsScreen(
     expenses: List<Expense>,
     aiAnalysis: String?,
     isAnalyzing: Boolean,
+    chatService: ChatService,
     onNavigateBack: () -> Unit,
     onAnalyzeClick: () -> Unit
 ) {
     val context = LocalContext.current
-    val chatService = remember {
-        val classifier = com.example.smartspend.data.chat.IntentClassifier(context)
-        ChatService(classifier)
-    }
     var showBottomSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
@@ -98,17 +102,16 @@ fun AnalyticsScreen(
             FloatingActionButton(
                 onClick = { showBottomSheet = true },
                 containerColor = AccentGreen,
-                contentColor = Color.Black,
-                shape = CircleShape
+                contentColor = Color.White
             ) {
                 Icon(
-                    imageVector = Icons.Rounded.Star, // AI Icon
-                    contentDescription = "Chat with AI",
-                    modifier = Modifier.size(28.dp)
+                    imageVector = Icons.Default.Star, // Using Star as Chat icon placeholder
+                    contentDescription = "Chat"
                 )
             }
         }
     ) { padding ->
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -400,7 +403,7 @@ fun AnalyticsChatBottomSheetContent(
     val totalFormat = java.text.NumberFormat.getCurrencyInstance().format(expenses.sumOf { it.amount })
     var messages by remember { mutableStateOf(listOf(
         ChatMessage(
-            text = "Hi! I've analyzed your ${expenses.size} transactions. Total spending: $totalFormat. detecting patterns... 🤖", 
+            text = "Hi! I've analyzed your ${expenses.size} transactions. Total spending: $totalFormat. Ask me anything! ✨", 
             isUser = false
         )
     )) }
@@ -409,11 +412,36 @@ fun AnalyticsChatBottomSheetContent(
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
 
+    val commonQuestions = listOf(
+        "How do I save more? 📉",
+        "Am I spending too much? 🍔",
+        "Rate my spending ⭐️",
+        "What is my biggest expense? 💰"
+    )
+
+    fun sendMessage(text: String) {
+        if (text.isNotBlank()) {
+            val userMsg = ChatMessage(text = text, isUser = true)
+            messages = messages + userMsg
+            val query = text
+            inputText = ""
+            focusManager.clearFocus()
+            
+            scope.launch { listState.animateScrollToItem(messages.size - 1) }
+
+            scope.launch {
+                val response = chatService.generateAnalyticsResponse(query, expenses)
+                messages = messages + response
+                listState.animateScrollToItem(messages.size - 1)
+            }
+        }
+    }
+
     Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .height(500.dp)
+            .fillMaxSize() // Fill sheet instead of fixed height
             .padding(16.dp)
+            .imePadding() // Key fix: Push content up when keyboard opens
     ) {
         // Chat List
         LazyColumn(
@@ -429,6 +457,26 @@ fun AnalyticsChatBottomSheetContent(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+
+        // Suggestion Chips (New Feature)
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(commonQuestions) { question ->
+                SuggestionChip(
+                    onClick = { sendMessage(question) },
+                    label = { Text(question, color = TextPrimary) },
+                    colors = SuggestionChipDefaults.suggestionChipColors(
+                        containerColor = CardBackground,
+                        labelColor = TextPrimary
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, AccentGreen.copy(alpha = 0.5f))
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         // Input Area
         Row(
@@ -449,46 +497,13 @@ fun AnalyticsChatBottomSheetContent(
                 ),
                 shape = RoundedCornerShape(24.dp),
                 keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Send),
-                keyboardActions = KeyboardActions(onDone = {
-                    if (inputText.isNotBlank()) {
-                        val userMsg = ChatMessage(text = inputText, isUser = true)
-                        messages = messages + userMsg
-                        val query = inputText
-                        inputText = ""
-                        focusManager.clearFocus()
-                        
-                        scope.launch { listState.animateScrollToItem(messages.size - 1) }
-
-                        // Get AI Response (Analytics)
-                        scope.launch {
-                            val response = chatService.generateAnalyticsResponse(query, expenses)
-                            messages = messages + response
-                            listState.animateScrollToItem(messages.size - 1)
-                        }
-                    }
-                })
+                keyboardActions = KeyboardActions(onDone = { sendMessage(inputText) })
             )
             
             Spacer(modifier = Modifier.width(8.dp))
             
             IconButton(
-                onClick = {
-                    if (inputText.isNotBlank()) {
-                        val userMsg = ChatMessage(text = inputText, isUser = true)
-                        messages = messages + userMsg
-                        val query = inputText
-                        inputText = ""
-                        focusManager.clearFocus()
-                        
-                        scope.launch { listState.animateScrollToItem(messages.size - 1) }
-
-                        scope.launch {
-                            val response = chatService.generateAnalyticsResponse(query, expenses)
-                            messages = messages + response
-                            listState.animateScrollToItem(messages.size - 1)
-                        }
-                    }
-                },
+                onClick = { sendMessage(inputText) },
                 modifier = Modifier
                     .size(48.dp)
                     .background(AccentGreen, CircleShape)

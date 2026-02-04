@@ -147,6 +147,7 @@ fun SmartSpendNavHost(
                 expenses = expenses,
                 aiAnalysis = aiAnalysis,
                 isAnalyzing = isAnalyzing,
+                chatService = viewModel.chatService,
                 onNavigateBack = { navController.safePopBackStack() },
                 onAnalyzeClick = { viewModel.loadAiAnalysis(forceRefresh = true) }
             )

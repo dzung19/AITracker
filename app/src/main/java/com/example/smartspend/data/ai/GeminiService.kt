@@ -399,6 +399,28 @@ IMPORTANT: Return ONLY the raw JSON. No markdown formatting, no code blocks, no 
     }
 
     /**
+     * Generates a chat response using the current tier's model.
+     * Uses a lower temperature for consistent advice, but slightly higher than receipt parsing.
+     */
+    suspend fun chat(prompt: String): String? {
+        return try {
+            val chatModel = GenerativeModel(
+                modelName = tier.modelName,
+                apiKey = apiKey,
+                generationConfig = generationConfig {
+                    temperature = 0.7f // Creative but helpful
+                    maxOutputTokens = 500 // Concise answers
+                }
+            )
+            val response = chatModel.generateContent(prompt)
+            response.text?.trim()
+        } catch (e: Exception) {
+            Log.e("GeminiService", "Chat failed with ${tier.displayName}", e)
+            null
+        }
+    }
+
+    /**
      * Analyzes a list of expenses and provides a financial summary.
      */
     suspend fun analyzeSpending(expenses: List<Expense>, period: String): String? {

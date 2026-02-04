@@ -36,7 +36,8 @@ enum class TimePeriod {
 class MainViewModel @Inject constructor(
     private val repository: ExpenseRepository,
     private val receiptScanner: ReceiptScannerService,
-    private val geminiServiceManager: GeminiServiceManager
+    private val geminiServiceManager: GeminiServiceManager,
+    val chatService: com.example.smartspend.data.chat.ChatService
 ) : ViewModel() {
     
     init {

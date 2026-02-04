@@ -134,6 +134,14 @@ class GeminiServiceManager @Inject constructor(
         return result
     }
     
+    /**
+     * Generate a chat response using the active Tier.
+     */
+    suspend fun chat(prompt: String): String? {
+        // If service is missing (no API key), return null to trigger fallback
+        return _geminiService?.chat(prompt)
+    }
+
     // ==================== PRIVATE METHODS ====================
     
     private fun createService(tier: AiTier) {

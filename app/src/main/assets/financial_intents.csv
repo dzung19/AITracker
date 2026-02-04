@@ -1,0 +1,121 @@
+text,label
+"How much did I spend this month?",analyze_cost
+"Total expenses for January",analyze_cost
+"Show me my spending summary",analyze_cost
+"What is my biggest expense?",analyze_cost
+"Did I spend more than last month?",analyze_cost
+"Analyze my costs please",analyze_cost
+"Category distribution for my spending",analyze_cost
+"How much did I spend on food?",analyze_cost
+"What are my transport costs?",analyze_cost
+"My spending report",analyze_cost
+"Calculate total outcome",analyze_cost
+"Am I spending too much on coffee?",analyze_cost
+"Overview of my finances",analyze_cost
+"Show me the charts",analyze_cost
+"Statistics for this week",analyze_cost
+"spending breakdown",analyze_cost
+"where did my money go",analyze_cost
+"track my expenses",analyze_cost
+"financial summary",analyze_cost
+"cost analysis",analyze_cost
+"How much money do I have left?",analyze_cost
+"Show me my transaction history",analyze_cost
+"List all my purchases",analyze_cost
+"Did I buy anything expensive?",analyze_cost
+"What is my daily average spending?",analyze_cost
+"Can I afford a new phone?",analyze_cost
+"Check my balance",analyze_cost
+"spending trends",analyze_cost
+"monthly outcome vs income",analyze_cost
+"how much debt do I have",analyze_cost
+"report on utility bills",analyze_cost
+"sum of all my purchases",analyze_cost
+"breakdown by category",analyze_cost
+"show my shopping list costs",analyze_cost
+"highest spending day",analyze_cost
+"lowest spending day",analyze_cost
+"compare this week to last week",analyze_cost
+"did I go over budget?",analyze_cost
+"budget status",analyze_cost
+"remaining budget",analyze_cost
+" Give me a saving tip",saving_tip
+"How can I save money?",saving_tip
+"I want to save for a car",saving_tip
+"Help me reduce my expenses",saving_tip
+"Tips for better budget",saving_tip
+"Am I saving enough?",saving_tip
+"Suggest a savings plan",saving_tip
+"How to cut down costs?",saving_tip
+"Money saving advice",saving_tip
+"Decrease my spending",saving_tip
+"Best way to save 100 dollars",saving_tip
+"I spend too much",saving_tip
+"frugal living tips",saving_tip
+"investment advice",saving_tip
+"budgeting help",saving_tip
+"smart spending tricks",saving_tip
+"minimize unnecessary costs",saving_tip
+"how to be rich",saving_tip
+"stop wasting money",saving_tip
+"financial health advice",saving_tip
+"saving goals",saving_tip
+"recommend a budget",saving_tip
+"cut back on shopping",saving_tip
+"how to save on groceries",saving_tip
+"reduce electricity bill",saving_tip
+"cheaper alternatives to eating out",saving_tip
+"save money on gas",saving_tip
+"lower my subscription costs",saving_tip
+"avoid impulse buying",saving_tip
+"strategies for long term wealth",saving_tip
+"how much should I save monthly",saving_tip
+"emergency fund tips",saving_tip
+"retirement planning basics",saving_tip
+"cost cutting ideas",saving_tip
+"save specifically on clothes",saving_tip
+"diy money saving hacks",saving_tip
+"thrift store tips",saving_tip
+"couponing advice",saving_tip
+"cashback strategies",saving_tip
+"negotiate bills",saving_tip
+"Was I bad with money?",judgement
+"Judge my spending",judgement
+"Am I financially irresponsible?",judgement
+"Roast my expenses",judgement
+"Tell me if I assume too much debt",judgement
+"Is my spending healthy?",judgement
+"Rate my financial habits",judgement
+"Do I have a spending problem?",judgement
+"Critique my budget",judgement
+"Are my finances in trouble?",judgement
+"Am I poor?",judgement
+"Am I rich?",judgement
+"How bad is my spending?",judgement
+"evaluate my choices",judgement
+"score my budget",judgement
+"financial review",judgement
+"assess my purchases",judgement
+"give me a reality check",judgement
+"am I going broke?",judgement
+"tell me the harsh truth about my money",judgement
+"be mean about my spending",judgement
+"am I wasteful?",judgement
+"do I buy too much junk?",judgement
+"analyze my bad habits",judgement
+"financial intervention",judgement
+"Hello",greeting
+"Hi robot",greeting
+"Good morning",greeting
+"Hey there",greeting
+"Greetings",greeting
+"Start chat",greeting
+"Help me",greeting
+"Are you there?",greeting
+"Hola",greeting
+"Bonjour",greeting
+"Good afternoon",greeting
+"Hi financial assistant",greeting
+"I need help",greeting
+"Hello bot",greeting
+"Hi there friend",greeting

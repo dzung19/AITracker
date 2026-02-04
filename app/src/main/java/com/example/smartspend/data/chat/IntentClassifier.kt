@@ -2,43 +2,57 @@ package com.example.smartspend.data.chat
 
 import android.content.Context
 import android.util.Log
+import com.google.mediapipe.tasks.core.BaseOptions
+import com.google.mediapipe.tasks.text.textclassifier.TextClassifier
+import com.google.mediapipe.tasks.text.textclassifier.TextClassifier.TextClassifierOptions
 import dagger.hilt.android.qualifiers.ApplicationContext
-import org.tensorflow.lite.task.text.nlclassifier.BertNLClassifier
 import javax.inject.Inject
 import javax.inject.Singleton
 import java.io.IOException
 
 /**
- * Classifies the user's intent using a local TensorFlow Lite BERT model.
+ * Classifies the user's intent using a local MediaPipe TextClassifier (MobileBERT).
  * Falls back to basic keyword matching if the model is not found.
  */
 @Singleton
 class IntentClassifier @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    private var classifier: BertNLClassifier? = null
+    private var classifier: TextClassifier? = null
     private val MODEL_FILE = "mobilebert.tflite"
 
     init {
         try {
-            // Attempt to load the model from assets
-            // Note: In a real app, you must download 'mobilebert.tflite' and place it in src/main/assets
-            classifier = BertNLClassifier.createFromFile(context, MODEL_FILE)
-            Log.d("IntentClassifier", "TFLite Model loaded successfully")
-        } catch (e: IOException) {
-            Log.w("IntentClassifier", "Model file not found. Falling back to rule-based logic.")
+            // Initialize MediaPipe TextClassifier
+            val baseOptions = BaseOptions.builder()
+                .setModelAssetPath(MODEL_FILE)
+                .build()
+
+            val options = TextClassifierOptions.builder()
+                .setBaseOptions(baseOptions)
+                .build()
+
+            classifier = TextClassifier.createFromOptions(context, options)
+            Log.d("IntentClassifier", "MediaPipe Model loaded successfully")
         } catch (e: Exception) {
-            Log.e("IntentClassifier", "Error loading TFLite model", e)
+            Log.w("IntentClassifier", "Model file not found or invalid. Falling back to rule-based logic.", e)
         }
     }
 
     fun classify(text: String): String {
         return try {
             if (classifier != null) {
-                // TFLite Classification
-                val results = classifier?.classify(text) ?: return "unknown"
-                // Return the category with the highest score
-                results.maxByOrNull { it.score }?.label ?: "unknown"
+                // MediaPipe Classification
+                val results = classifier?.classify(text)
+                
+                // Extract top category
+                val category = results?.classificationResult()
+                    ?.classifications()
+                    ?.firstOrNull()
+                    ?.categories()
+                    ?.maxByOrNull { it.score() }
+                
+                category?.categoryName() ?: "unknown"
             } else {
                 // Fallback Logic (if model missing)
                 simpleHeuristicClassify(text)

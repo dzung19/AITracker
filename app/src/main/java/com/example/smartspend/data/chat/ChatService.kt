@@ -1,5 +1,6 @@
 package com.example.smartspend.data.chat
 
+import com.example.smartspend.data.ai.GeminiServiceManager
 import com.example.smartspend.data.local.Expense
 import kotlinx.coroutines.delay
 import java.text.NumberFormat
@@ -16,13 +17,23 @@ data class ChatMessage(
 
 @Singleton
 class ChatService @Inject constructor(
-    private val intentClassifier: IntentClassifier
+    private val intentClassifier: IntentClassifier,
+    private val geminiServiceManager: GeminiServiceManager
 ) {
 
     private val currencyFormat = NumberFormat.getCurrencyInstance(Locale.getDefault())
 
     suspend fun generateResponse(message: String, expense: Expense): ChatMessage {
-        // ... (existing single expense logic)
+        // 1. Try Gemini Cloud (Native Tier)
+        if (geminiServiceManager.isConfigured) {
+            val systemPrompt = "You are a financial advisor. Context: User spent ${currencyFormat.format(expense.amount)} on ${expense.title} (Category: ${expense.category}). User says: \"$message\". Reply concisely (max 2 sentences) with advice."
+            val aiResponse = geminiServiceManager.chat(systemPrompt)
+            if (!aiResponse.isNullOrBlank()) {
+                return ChatMessage(text = aiResponse + " ✨", isUser = false)
+            }
+        }
+
+        // 2. Fallback: Classifier + Rules (MobileBERT)
         delay(600)
         val intent = intentClassifier.classify(message)
         val responseText = when (intent) {
@@ -36,14 +47,24 @@ class ChatService @Inject constructor(
     }
 
     suspend fun generateAnalyticsResponse(message: String, expenses: List<Expense>): ChatMessage {
-        delay(800)
-        val intent = intentClassifier.classify(message)
-        
         val total = expenses.sumOf { it.amount }
         val topCategory = expenses.groupBy { it.category }
             .maxByOrNull { it.value.sumOf { exp -> exp.amount } }
             ?.key ?: "None"
-            
+
+        // 1. Try Gemini Cloud
+        if (geminiServiceManager.isConfigured) {
+            val systemPrompt = "Context: User spent ${currencyFormat.format(total)} on ${expenses.size} items. Top Category: $topCategory. User says: \"$message\". Reply concisely."
+            val aiResponse = geminiServiceManager.chat(systemPrompt)
+            if (!aiResponse.isNullOrBlank()) {
+                return ChatMessage(text = aiResponse + " 📊", isUser = false)
+            }
+        }
+
+        // 2. Fallback
+        delay(800)
+        val intent = intentClassifier.classify(message)
+        
         val responseText = when (intent) {
             "analyze_cost" -> "You've spent a total of ${currencyFormat.format(total)} in this period. Your highest spending category is $topCategory."
             "saving_tip" -> "Since $topCategory is your biggest expense, try setting a stricter budget for it! small habits add up. 📉"
