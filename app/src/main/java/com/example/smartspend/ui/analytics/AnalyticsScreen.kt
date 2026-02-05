@@ -76,7 +76,8 @@ fun AnalyticsScreen(
 ) {
     val context = LocalContext.current
     var showBottomSheet by remember { mutableStateOf(false) }
-    val sheetState = rememberModalBottomSheetState()
+    // FIX: specific to user request - force full expansion so input is visible
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
     Scaffold(
@@ -120,14 +121,14 @@ fun AnalyticsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            
+
             // 1. Spider Chart Section
             Text(
                 text = "Category Distribution",
                 style = MaterialTheme.typography.titleMedium,
                 color = TextSecondary
             )
-            
+
             if (expenses.isNotEmpty()) {
                 SpiderChartCard(expenses = expenses)
             } else {
@@ -140,7 +141,7 @@ fun AnalyticsScreen(
                 style = MaterialTheme.typography.titleMedium,
                 color = TextSecondary
             )
-            
+
             AiAnalysisCard(
                 analysis = aiAnalysis,
                 isLoading = isAnalyzing,
@@ -153,12 +154,12 @@ fun AnalyticsScreen(
                 onDismissRequest = { showBottomSheet = false },
                 sheetState = sheetState,
                 containerColor = CardBackground,
-                contentColor = TextPrimary 
+                contentColor = TextPrimary
             ) {
-               AnalyticsChatBottomSheetContent(
-                   expenses = expenses, 
-                   chatService = chatService
-               )
+                AnalyticsChatBottomSheetContent(
+                    expenses = expenses,
+                    chatService = chatService
+                )
             }
         }
     }
@@ -167,7 +168,9 @@ fun AnalyticsScreen(
 @Composable
 fun EmptyChartState() {
     Card(
-        modifier = Modifier.fillMaxWidth().height(250.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(250.dp),
         colors = CardDefaults.cardColors(containerColor = CardBackground),
         shape = RoundedCornerShape(16.dp)
     ) {
@@ -187,14 +190,16 @@ fun SpiderChartCard(expenses: List<Expense>) {
         shape = RoundedCornerShape(24.dp)
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             val categories = remember(expenses) {
                 expenses.groupBy { it.category }
                     .mapValues { entry -> entry.value.sumOf { it.amount } }
             }
-            
+
             if (categories.isEmpty()) {
                 Text("No data", color = TextSecondary)
             } else {
@@ -215,7 +220,7 @@ fun SpiderChart(
     modifier: Modifier = Modifier
 ) {
     val animationProgress = remember { Animatable(0f) }
-    
+
     LaunchedEffect(data) {
         animationProgress.animateTo(1f, animationSpec = tween(1000))
     }
@@ -251,7 +256,7 @@ fun SpiderChart(
             val angle = index * stepAngle - (PI / 2) // Start from top
             val endX = center.x + (radius * cos(angle)).toFloat()
             val endY = center.y + (radius * sin(angle)).toFloat()
-            
+
             drawLine(
                 color = TextSecondary.copy(alpha = 0.2f),
                 start = center,
@@ -262,8 +267,9 @@ fun SpiderChart(
             // Draw Label
             val labelRadius = radius + 40f
             val labelX = center.x + (labelRadius * cos(angle)).toFloat()
-            val labelY = center.y + (labelRadius * sin(angle)).toFloat() + 10f // Simple vertical adjustment
-            
+            val labelY =
+                center.y + (labelRadius * sin(angle)).toFloat() + 10f // Simple vertical adjustment
+
             drawContext.canvas.nativeCanvas.drawText(
                 label,
                 labelX,
@@ -285,7 +291,7 @@ fun SpiderChart(
                 val y = center.y + (r * sin(angle)).toFloat()
 
                 if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
-                
+
                 // Draw data points
                 drawCircle(
                     color = AccentGreen,
@@ -294,7 +300,7 @@ fun SpiderChart(
                 )
             }
             path.close()
-            
+
             // Fill
             drawPath(
                 path = path,
@@ -400,13 +406,18 @@ fun AnalyticsChatBottomSheetContent(
     expenses: List<Expense>,
     chatService: ChatService
 ) {
-    val totalFormat = java.text.NumberFormat.getCurrencyInstance().format(expenses.sumOf { it.amount })
-    var messages by remember { mutableStateOf(listOf(
-        ChatMessage(
-            text = "Hi! I've analyzed your ${expenses.size} transactions. Total spending: $totalFormat. Ask me anything! ✨", 
-            isUser = false
+    val totalFormat =
+        java.text.NumberFormat.getCurrencyInstance().format(expenses.sumOf { it.amount })
+    var messages by remember {
+        mutableStateOf(
+            listOf(
+                ChatMessage(
+                    text = "Hi! I've analyzed your ${expenses.size} transactions. Total spending: $totalFormat. Ask me anything! ✨",
+                    isUser = false
+                )
+            )
         )
-    )) }
+    }
     var inputText by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
@@ -426,7 +437,7 @@ fun AnalyticsChatBottomSheetContent(
             val query = text
             inputText = ""
             focusManager.clearFocus()
-            
+
             scope.launch { listState.animateScrollToItem(messages.size - 1) }
 
             scope.launch {
@@ -439,9 +450,8 @@ fun AnalyticsChatBottomSheetContent(
 
     Column(
         modifier = Modifier
-            .fillMaxSize() // Fill sheet instead of fixed height
             .padding(16.dp)
-            .imePadding() // Key fix: Push content up when keyboard opens
+            .navigationBarsPadding() // Key fix: Push content up above nav bar
     ) {
         // Chat List
         LazyColumn(
@@ -471,7 +481,10 @@ fun AnalyticsChatBottomSheetContent(
                         containerColor = CardBackground,
                         labelColor = TextPrimary
                     ),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, AccentGreen.copy(alpha = 0.5f))
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        AccentGreen.copy(alpha = 0.5f)
+                    )
                 )
             }
         }
@@ -499,9 +512,9 @@ fun AnalyticsChatBottomSheetContent(
                 keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Send),
                 keyboardActions = KeyboardActions(onDone = { sendMessage(inputText) })
             )
-            
+
             Spacer(modifier = Modifier.width(8.dp))
-            
+
             IconButton(
                 onClick = { sendMessage(inputText) },
                 modifier = Modifier
@@ -533,8 +546,8 @@ fun ChatBubble(message: ChatMessage) {
             modifier = Modifier
                 .clip(
                     RoundedCornerShape(
-                        topStart = 16.dp, 
-                        topEnd = 16.dp, 
+                        topStart = 16.dp,
+                        topEnd = 16.dp,
                         bottomStart = if (message.isUser) 16.dp else 4.dp,
                         bottomEnd = if (message.isUser) 4.dp else 16.dp
                     )
@@ -543,7 +556,7 @@ fun ChatBubble(message: ChatMessage) {
                 .padding(12.dp)
         ) {
             Text(
-                text = message.text, 
+                text = message.text,
                 color = textColor,
                 style = MaterialTheme.typography.bodyMedium
             )

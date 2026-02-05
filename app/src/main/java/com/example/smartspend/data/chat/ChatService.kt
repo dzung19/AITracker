@@ -54,7 +54,22 @@ class ChatService @Inject constructor(
 
         // 1. Try Gemini Cloud
         if (geminiServiceManager.isConfigured) {
-            val systemPrompt = "Context: User spent ${currencyFormat.format(total)} on ${expenses.size} items. Top Category: $topCategory. User says: \"$message\". Reply concisely."
+            val systemPrompt = """
+                You are an Expert Financial Advisor.
+                
+                **Financial Data:**
+                - Total Spending: ${currencyFormat.format(total)}
+                - Transactions: ${expenses.size}
+                - Highest Cost Category: $topCategory
+                
+                **User Question:** "$message"
+                
+                **Instructions:**
+                - Provide specific, actionable advice based on the data.
+                - If the user asks for savings, suggest cutting down on the top category.
+                - Be friendly, concise (max 3 sentences), and motivational.
+                - Use emojis to make it engaging.
+            """.trimIndent()
             val aiResponse = geminiServiceManager.chat(systemPrompt)
             if (!aiResponse.isNullOrBlank()) {
                 return ChatMessage(text = aiResponse + " 📊", isUser = false)
