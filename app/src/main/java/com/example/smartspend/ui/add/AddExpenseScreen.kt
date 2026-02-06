@@ -234,7 +234,7 @@ fun AddExpenseScreen(
                 onExpandedChange = { showCategoryDropdown = it }
             ) {
                 OutlinedTextField(
-                    value = selectedCategory.displayName,
+                    value = "${selectedCategory.icon} ${selectedCategory.displayName}",
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("Category") },
@@ -268,7 +268,7 @@ fun AddExpenseScreen(
                                             .background(category.color)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text(category.displayName, color = TextPrimary)
+                                    Text("${category.icon} ${category.displayName}", color = TextPrimary)
                                 }
                             },
                             onClick = {

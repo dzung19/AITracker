@@ -826,7 +826,8 @@ private fun ExpenseCard(
 
 @Composable
 private fun CategoryChip(category: String) {
-    val chipColor = fromString(category).color
+    val categoryEnum = fromString(category)
+    val chipColor = categoryEnum.color
 
     Box(
         modifier = Modifier
@@ -835,7 +836,7 @@ private fun CategoryChip(category: String) {
             .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         Text(
-            text = category,
+            text = "${categoryEnum.icon} $category",
             style = MaterialTheme.typography.labelSmall,
             color = chipColor,
             fontWeight = FontWeight.Medium
