@@ -56,3 +56,13 @@ captures/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# ML Training / AI Setup (keep out of repo)
+ml/
+*.onnx
+*.pt
+*.pth
+*.h5
+*.pb
+FINE_TUNE_GUIDE.md
+LLM_SETUP.md
