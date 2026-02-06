@@ -26,6 +26,7 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalAdjusters
 import javax.inject.Inject
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import com.example.smartspend.di.AppModule
@@ -229,7 +230,7 @@ class MainViewModel @Inject constructor(
             val endOfPrevMonth = previousMonth.withDayOfMonth(previousMonth.lengthOfMonth()).atTime(java.time.LocalTime.MAX)
             val formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
             
-            val prevMonthExpenses = repository.getExpensesBetween(
+            val prevMonthExpenses = repository.getExpensesByDateRange(
                 formatter.format(startOfPrevMonth),
                 formatter.format(endOfPrevMonth)
             ).first()

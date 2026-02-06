@@ -308,7 +308,6 @@ fun HomeScreen(
                     Spacer(modifier = Modifier.height(80.dp)) // Space for FAB
                 }
             }
-            }
         }
     }
     
