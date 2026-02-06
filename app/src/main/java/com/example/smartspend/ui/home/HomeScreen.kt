@@ -32,6 +32,8 @@ import java.time.LocalDate
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import com.example.smartspend.data.local.Category.Companion.fromString
 import com.example.smartspend.ui.TimePeriod
 
@@ -50,7 +52,10 @@ fun HomeScreen(
     expenses: List<Expense>,
     totalSpending: Double,
     currentDate: LocalDate,
+    installDate: LocalDate,
     selectedPeriod: TimePeriod,
+    monthlyBudget: Double?,
+    onSetBudget: (Double?) -> Unit,
     onPeriodSelected: (TimePeriod) -> Unit,
     onPreviousPeriod: () -> Unit,
     onNextPeriod: () -> Unit,
@@ -64,6 +69,9 @@ fun HomeScreen(
     val currencyFormatter = remember { NumberFormat.getCurrencyInstance(Locale.getDefault()) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    
+    // Budget dialog state
+    var showBudgetDialog by remember { mutableStateOf(false) }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -199,12 +207,26 @@ fun HomeScreen(
                             }
                             else -> true
                         }
+                        
+                        // Check if we can go back (not before install date)
+                        val isPreviousEnabled = when (selectedPeriod) {
+                            TimePeriod.MONTH -> {
+                                val prevMonth = currentDate.minusMonths(1)
+                                !prevMonth.withDayOfMonth(1).isBefore(installDate.withDayOfMonth(1))
+                            }
+                            TimePeriod.YEAR -> {
+                                val prevYear = currentDate.minusYears(1)
+                                prevYear.year >= installDate.year
+                            }
+                            else -> true
+                        }
 
                         DateNavigator(
                             currentDate = currentDate,
                             period = selectedPeriod,
                             onPrevious = onPreviousPeriod,
                             onNext = onNextPeriod,
+                            isPreviousEnabled = isPreviousEnabled,
                             isNextEnabled = isNextEnabled
                         )
                         Spacer(modifier = Modifier.height(16.dp))
@@ -215,7 +237,9 @@ fun HomeScreen(
                         currencyFormatter = currencyFormatter,
                         period = selectedPeriod,
                         date = currentDate,
-                        onClick = onTotalClick
+                        budget = monthlyBudget,
+                        onClick = onTotalClick,
+                        onEditBudget = { showBudgetDialog = true }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
@@ -250,8 +274,86 @@ fun HomeScreen(
                     Spacer(modifier = Modifier.height(80.dp)) // Space for FAB
                 }
             }
+            }
         }
     }
+    
+    // Budget Dialog
+    if (showBudgetDialog) {
+        BudgetDialog(
+            currentBudget = monthlyBudget,
+            onDismiss = { showBudgetDialog = false },
+            onConfirm = { newBudget ->
+                onSetBudget(newBudget)
+                showBudgetDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+private fun BudgetDialog(
+    currentBudget: Double?,
+    onDismiss: () -> Unit,
+    onConfirm: (Double?) -> Unit
+) {
+    var budgetText by remember { mutableStateOf(currentBudget?.toString() ?: "") }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = CardBackground,
+        titleContentColor = TextPrimary,
+        textContentColor = TextSecondary,
+        title = { Text("Set Monthly Budget") },
+        text = {
+            Column {
+                Text(
+                    "Enter your budget for this month:",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = budgetText,
+                    onValueChange = { budgetText = it.filter { c -> c.isDigit() || c == '.' } },
+                    label = { Text("Budget Amount") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary,
+                        focusedBorderColor = AccentGreen,
+                        unfocusedBorderColor = TextSecondary,
+                        cursorColor = AccentGreen,
+                        focusedLabelColor = AccentGreen,
+                        unfocusedLabelColor = TextSecondary
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val amount = budgetText.toDoubleOrNull()
+                    onConfirm(amount)
+                }
+            ) {
+                Text("Save", color = AccentGreen)
+            }
+        },
+        dismissButton = {
+            Row {
+                if (currentBudget != null) {
+                    TextButton(onClick = { onConfirm(null) }) {
+                        Text("Clear", color = Color(0xFFEF5350))
+                    }
+                }
+                TextButton(onClick = onDismiss) {
+                    Text("Cancel", color = TextSecondary)
+                }
+            }
+        }
+    )
 }
 
 @Composable
@@ -260,12 +362,23 @@ private fun TotalSpendingCard(
     currencyFormatter: NumberFormat,
     period: TimePeriod,
     date: LocalDate,
-    onClick: () -> Unit
+    budget: Double?,
+    onClick: () -> Unit,
+    onEditBudget: () -> Unit
 ) {
     val periodLabel = when (period) {
         TimePeriod.ALL -> "All Time"
         TimePeriod.MONTH -> date.format(DateTimeFormatter.ofPattern("MMMM yyyy"))
         TimePeriod.YEAR -> date.format(DateTimeFormatter.ofPattern("yyyy"))
+    }
+    
+    // Calculate progress and colors
+    val progress = if (budget != null && budget > 0) (total / budget).coerceIn(0.0, 1.5) else 0.0
+    val progressColor = when {
+        budget == null -> AccentGreen
+        progress <= 0.75 -> AccentGreen  // Green: under 75%
+        progress <= 1.0 -> Color(0xFFFFB74D)  // Yellow/Orange: 75-100%
+        else -> Color(0xFFEF5350)  // Red: over budget
     }
 
     Card(
@@ -293,12 +406,94 @@ private fun TotalSpendingCard(
                     color = TextPrimary.copy(alpha = 0.8f)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = currencyFormatter.format(total),
-                    fontSize = 36.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary
-                )
+                
+                // Spending amount with budget
+                Row(
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    Text(
+                        text = currencyFormatter.format(total),
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    if (budget != null) {
+                        Text(
+                            text = " / ${currencyFormatter.format(budget)}",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = TextPrimary.copy(alpha = 0.7f),
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        )
+                    } else {
+                        Text(
+                            text = " / —",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = TextPrimary.copy(alpha = 0.5f),
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        )
+                    }
+                }
+                
+                // Only show progress bar for month period when budget is set
+                if (period == TimePeriod.MONTH && budget != null) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    // Progress bar
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(TextPrimary.copy(alpha = 0.2f))
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth((progress.toFloat()).coerceAtMost(1f))
+                                .fillMaxHeight()
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(progressColor)
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    // Remaining or over budget text
+                    val remaining = budget - total
+                    Text(
+                        text = if (remaining >= 0) {
+                            "${currencyFormatter.format(remaining)} remaining"
+                        } else {
+                            "${currencyFormatter.format(-remaining)} over budget"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = progressColor,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+                
+                // Tap to set budget hint (only for MONTH when no budget)
+                if (period == TimePeriod.MONTH && budget == null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Tap to set monthly budget",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextPrimary.copy(alpha = 0.6f),
+                        modifier = Modifier.clickable(onClick = onEditBudget)
+                    )
+                }
+                
+                // Edit budget button (for month period when budget exists)
+                if (period == TimePeriod.MONTH && budget != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Edit budget",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextPrimary.copy(alpha = 0.5f),
+                        modifier = Modifier.clickable(onClick = onEditBudget)
+                    )
+                }
             }
         }
     }
@@ -345,6 +540,7 @@ private fun DateNavigator(
     period: TimePeriod,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
+    isPreviousEnabled: Boolean = true,
     isNextEnabled: Boolean = true
 ) {
     val displayText = when (period) {
@@ -358,11 +554,14 @@ private fun DateNavigator(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(onClick = onPrevious) {
+        IconButton(
+            onClick = onPrevious,
+            enabled = isPreviousEnabled
+        ) {
             Icon(
                 imageVector = Icons.Default.ArrowBack,
                 contentDescription = "Previous",
-                tint = TextPrimary
+                tint = if (isPreviousEnabled) TextPrimary else TextSecondary.copy(alpha = 0.3f)
             )
         }
         

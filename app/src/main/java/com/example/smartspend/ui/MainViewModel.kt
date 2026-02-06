@@ -1,5 +1,6 @@
 package com.example.smartspend.ui
 
+import android.content.SharedPreferences
 import android.util.Log
 import androidx.camera.core.ImageProxy
 import androidx.lifecycle.ViewModel
@@ -27,6 +28,9 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import com.example.smartspend.di.AppModule
+import java.time.Instant
+import java.time.ZoneId
 
 enum class TimePeriod {
     ALL, MONTH, YEAR
@@ -37,8 +41,19 @@ class MainViewModel @Inject constructor(
     private val repository: ExpenseRepository,
     private val receiptScanner: ReceiptScannerService,
     private val geminiServiceManager: GeminiServiceManager,
-    val chatService: com.example.smartspend.data.chat.ChatService
+    val chatService: com.example.smartspend.data.chat.ChatService,
+    private val prefs: SharedPreferences
 ) : ViewModel() {
+    
+    // Install date - the earliest date users can navigate to
+    val installDate: LocalDate = run {
+        val installMillis = prefs.getLong(AppModule.INSTALL_DATE_KEY, System.currentTimeMillis())
+        Instant.ofEpochMilli(installMillis).atZone(ZoneId.systemDefault()).toLocalDate()
+    }
+    
+    // Monthly Budget - stored per month in SharedPreferences
+    private val _monthlyBudget = MutableStateFlow<Double?>(null)
+    val monthlyBudget: StateFlow<Double?> = _monthlyBudget.asStateFlow()
     
     init {
         // FOR TESTING: Unlock all tiers by default
@@ -148,6 +163,32 @@ class MainViewModel @Inject constructor(
                 _aiAnalysis.value = null
             }
         }
+        
+        // Load budget for current month on startup
+        loadBudgetForCurrentMonth()
+    }
+    
+    // ==================== BUDGET MANAGEMENT ====================
+    
+    private fun getBudgetKey(date: LocalDate): String {
+        return "budget_${date.year}_${date.monthValue}"
+    }
+    
+    private fun loadBudgetForCurrentMonth() {
+        val key = getBudgetKey(_currentDate.value)
+        val budget = prefs.getFloat(key, -1f)
+        _monthlyBudget.value = if (budget < 0) null else budget.toDouble()
+    }
+    
+    fun setMonthlyBudget(amount: Double?) {
+        val key = getBudgetKey(_currentDate.value)
+        if (amount == null || amount <= 0) {
+            prefs.edit().remove(key).apply()
+            _monthlyBudget.value = null
+        } else {
+            prefs.edit().putFloat(key, amount.toFloat()).apply()
+            _monthlyBudget.value = amount
+        }
     }
     
     // ==================== AI ANALYSIS ====================
@@ -183,6 +224,7 @@ class MainViewModel @Inject constructor(
 
     fun setTimePeriod(period: TimePeriod) {
         _selectedPeriod.value = period
+        loadBudgetForCurrentMonth()
     }
 
     fun nextPeriod() {
@@ -191,6 +233,7 @@ class MainViewModel @Inject constructor(
             TimePeriod.YEAR -> _currentDate.value.plusYears(1)
             TimePeriod.ALL -> _currentDate.value // No op
         }
+        loadBudgetForCurrentMonth()
     }
 
     fun previousPeriod() {
@@ -199,6 +242,7 @@ class MainViewModel @Inject constructor(
             TimePeriod.YEAR -> _currentDate.value.minusYears(1)
             TimePeriod.ALL -> _currentDate.value // No op
         }
+        loadBudgetForCurrentMonth()
     }
 
     private fun calculateDateRange(period: TimePeriod, date: LocalDate): Pair<String?, String?> {

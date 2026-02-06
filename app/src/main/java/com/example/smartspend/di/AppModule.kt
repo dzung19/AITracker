@@ -19,11 +19,19 @@ import javax.inject.Singleton
 object AppModule {
     
     private const val PREFS_NAME = "smartspend_prefs"
+    const val INSTALL_DATE_KEY = "app_install_date"
     
     @Provides
     @Singleton
     fun provideSharedPreferences(@ApplicationContext context: Context): SharedPreferences {
-        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        
+        // Store install date on first launch
+        if (!prefs.contains(INSTALL_DATE_KEY)) {
+            prefs.edit().putLong(INSTALL_DATE_KEY, System.currentTimeMillis()).apply()
+        }
+        
+        return prefs
     }
     
     @Provides

@@ -66,6 +66,7 @@ fun SmartSpendNavHost(
     val totalSpending by viewModel.totalSpending.collectAsState()
     val currentDate by viewModel.currentDate.collectAsState()
     val selectedPeriod by viewModel.selectedPeriod.collectAsState()
+    val monthlyBudget by viewModel.monthlyBudget.collectAsState()
     
     val isScanning by viewModel.isScanning.collectAsState()
     val scannedTitle by viewModel.scannedTitle.collectAsState()
@@ -117,7 +118,10 @@ fun SmartSpendNavHost(
                 expenses = expenses,
                 totalSpending = totalSpending,
                 currentDate = currentDate,
+                installDate = viewModel.installDate,
                 selectedPeriod = selectedPeriod,
+                monthlyBudget = monthlyBudget,
+                onSetBudget = { viewModel.setMonthlyBudget(it) },
                 onPeriodSelected = { viewModel.setTimePeriod(it) },
                 onPreviousPeriod = { viewModel.previousPeriod() },
                 onNextPeriod = { viewModel.nextPeriod() },

@@ -80,8 +80,8 @@ fun AnalyticsScreen(
 ) {
     val context = LocalContext.current
     var showBottomSheet by remember { mutableStateOf(false) }
-    // FIX: specific to user request - force full expansion so input is visible
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    // Allow partial expansion - not full screen
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
     val scope = rememberCoroutineScope()
 
     Scaffold(
@@ -460,11 +460,11 @@ fun AnalyticsChatBottomSheetContent(
             .padding(16.dp)
             .navigationBarsPadding() // Key fix: Push content up above nav bar
     ) {
-        // Chat List
+        // Chat List - scrollable with max height
         LazyColumn(
             state = listState,
             modifier = Modifier
-                .weight(1f)
+                .heightIn(max = 300.dp)
                 .fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
