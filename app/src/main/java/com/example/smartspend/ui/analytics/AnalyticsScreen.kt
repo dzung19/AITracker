@@ -2,6 +2,10 @@ package com.example.smartspend.ui.analytics
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -419,6 +423,7 @@ fun AnalyticsChatBottomSheetContent(
         )
     }
     var inputText by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
@@ -441,7 +446,9 @@ fun AnalyticsChatBottomSheetContent(
             scope.launch { listState.animateScrollToItem(messages.size - 1) }
 
             scope.launch {
+                isLoading = true
                 val response = chatService.generateAnalyticsResponse(query, expenses)
+                isLoading = false
                 messages = messages + response
                 listState.animateScrollToItem(messages.size - 1)
             }
@@ -463,6 +470,13 @@ fun AnalyticsChatBottomSheetContent(
         ) {
             items(messages) { msg ->
                 ChatBubble(message = msg)
+            }
+            
+            // Show typing indicator while AI is generating response
+            if (isLoading) {
+                item {
+                    TypingIndicator()
+                }
             }
         }
 
@@ -560,6 +574,91 @@ fun ChatBubble(message: ChatMessage) {
                 color = textColor,
                 style = MaterialTheme.typography.bodyMedium
             )
+        }
+    }
+}
+
+/**
+ * Animated typing indicator with bouncing dots
+ */
+@Composable
+fun TypingIndicator() {
+    val infiniteTransition = rememberInfiniteTransition(label = "typing")
+    
+    val dot1Alpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(600),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "dot1"
+    )
+    val dot2Alpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(600, delayMillis = 200),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "dot2"
+    )
+    val dot3Alpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(600, delayMillis = 400),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "dot3"
+    )
+    
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.Start
+    ) {
+        Box(
+            modifier = Modifier
+                .clip(
+                    RoundedCornerShape(
+                        topStart = 16.dp,
+                        topEnd = 16.dp,
+                        bottomStart = 4.dp,
+                        bottomEnd = 16.dp
+                    )
+                )
+                .background(Color(0xFF2A2A35))
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .background(
+                            AccentGreen.copy(alpha = dot1Alpha),
+                            CircleShape
+                        )
+                )
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .background(
+                            AccentGreen.copy(alpha = dot2Alpha),
+                            CircleShape
+                        )
+                )
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .background(
+                            AccentGreen.copy(alpha = dot3Alpha),
+                            CircleShape
+                        )
+                )
+            }
         }
     }
 }
