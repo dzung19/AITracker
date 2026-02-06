@@ -12,14 +12,17 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.DateRange
 import kotlinx.coroutines.launch
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.animation.core.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -55,10 +58,14 @@ fun HomeScreen(
     installDate: LocalDate,
     selectedPeriod: TimePeriod,
     monthlyBudget: Double?,
+    streakCount: Int,
+    showStreakCelebration: Boolean,
+    onDismissStreak: () -> Unit,
     onSetBudget: (Double?) -> Unit,
     onPeriodSelected: (TimePeriod) -> Unit,
     onPreviousPeriod: () -> Unit,
     onNextPeriod: () -> Unit,
+    onDateSelected: (LocalDate) -> Unit,
     onAddClick: () -> Unit,
     onDeleteClick: (Expense) -> Unit,
     onExpenseClick: (Long) -> Unit,
@@ -72,6 +79,17 @@ fun HomeScreen(
     
     // Budget dialog state
     var showBudgetDialog by remember { mutableStateOf(false) }
+    
+    // Date picker dialog state
+    var showDatePicker by remember { mutableStateOf(false) }
+    
+    // Streak celebration dialog
+    if (showStreakCelebration) {
+        StreakCelebrationDialog(
+            streakCount = streakCount,
+            onDismiss = onDismissStreak
+        )
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -152,6 +170,15 @@ fun HomeScreen(
                             Icon(
                                 imageVector = Icons.Default.Menu,
                                 contentDescription = "Menu",
+                                tint = TextPrimary
+                            )
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = { showDatePicker = true }) {
+                            Icon(
+                                imageVector = Icons.Default.DateRange,
+                                contentDescription = "Pick Date",
                                 tint = TextPrimary
                             )
                         }
@@ -241,6 +268,13 @@ fun HomeScreen(
                         onClick = onTotalClick,
                         onEditBudget = { showBudgetDialog = true }
                     )
+                    
+                    // Streak Badge
+                    if (streakCount > 0) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        StreakBadge(streakCount = streakCount)
+                    }
+                    
                     Spacer(modifier = Modifier.height(8.dp))
                 }
 
@@ -286,6 +320,19 @@ fun HomeScreen(
             onConfirm = { newBudget ->
                 onSetBudget(newBudget)
                 showBudgetDialog = false
+            }
+        )
+    }
+    
+    // Month/Year Picker Dialog
+    if (showDatePicker) {
+        MonthYearPickerDialog(
+            currentDate = currentDate,
+            installDate = installDate,
+            onDismiss = { showDatePicker = false },
+            onConfirm = { selectedDate ->
+                onDateSelected(selectedDate)
+                showDatePicker = false
             }
         )
     }
@@ -351,6 +398,132 @@ private fun BudgetDialog(
                 TextButton(onClick = onDismiss) {
                     Text("Cancel", color = TextSecondary)
                 }
+            }
+        }
+    )
+}
+
+@Composable
+private fun MonthYearPickerDialog(
+    currentDate: LocalDate,
+    installDate: LocalDate,
+    onDismiss: () -> Unit,
+    onConfirm: (LocalDate) -> Unit
+) {
+    var selectedYear by remember { mutableStateOf(currentDate.year) }
+    var selectedMonth by remember { mutableStateOf(currentDate.monthValue) }
+    
+    val months = listOf(
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    )
+    
+    val currentYear = LocalDate.now().year
+    val currentMonth = LocalDate.now().monthValue
+    val years = (installDate.year..currentYear).toList()
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = CardBackground,
+        titleContentColor = TextPrimary,
+        textContentColor = TextSecondary,
+        title = { Text("Go to Date") },
+        text = {
+            Column {
+                // Year selector
+                Text("Year", style = MaterialTheme.typography.labelMedium, color = TextSecondary)
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    years.takeLast(5).forEach { year ->
+                        val isSelected = year == selectedYear
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isSelected) AccentGreen else CardBackground)
+                                .clickable { selectedYear = year }
+                                .padding(horizontal = 12.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = year.toString(),
+                                color = if (isSelected) Color.Black else TextPrimary,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Month selector
+                Text("Month", style = MaterialTheme.typography.labelMedium, color = TextSecondary)
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // Grid of months (3 columns)
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    for (row in 0..3) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            for (col in 0..2) {
+                                val monthIndex = row * 3 + col
+                                if (monthIndex < 12) {
+                                    val monthNum = monthIndex + 1
+                                    val isSelected = monthNum == selectedMonth
+                                    // Disable future months in current year
+                                    val isDisabled = selectedYear == currentYear && monthNum > currentMonth
+                                    // Disable months before install date
+                                    val isBeforeInstall = selectedYear == installDate.year && monthNum < installDate.monthValue
+                                    
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(
+                                                when {
+                                                    isSelected -> AccentGreen
+                                                    isDisabled || isBeforeInstall -> CardBackground.copy(alpha = 0.5f)
+                                                    else -> CardBackground
+                                                }
+                                            )
+                                            .clickable(enabled = !isDisabled && !isBeforeInstall) { 
+                                                selectedMonth = monthNum 
+                                            }
+                                            .padding(vertical = 12.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = months[monthIndex],
+                                            color = when {
+                                                isSelected -> Color.Black
+                                                isDisabled || isBeforeInstall -> TextSecondary.copy(alpha = 0.3f)
+                                                else -> TextPrimary
+                                            },
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onConfirm(LocalDate.of(selectedYear, selectedMonth, 1))
+                }
+            ) {
+                Text("Go", color = AccentGreen)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = TextSecondary)
             }
         }
     )
@@ -702,4 +875,129 @@ private fun EmptyStateCard() {
             )
         }
     }
+}
+
+@Composable
+private fun StreakBadge(streakCount: Int) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(
+                        Color(0xFFFF6B35),
+                        Color(0xFFFF9500)
+                    )
+                )
+            )
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "🔥",
+            fontSize = 24.sp
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = "$streakCount month${if (streakCount > 1) "s" else ""} under budget!",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = Color.White
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = "🔥",
+            fontSize = 24.sp
+        )
+    }
+}
+
+@Composable
+private fun StreakCelebrationDialog(
+    streakCount: Int,
+    onDismiss: () -> Unit
+) {
+    // Animation for the fire emoji
+    val infiniteTransition = rememberInfiniteTransition(label = "streak")
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(500, easing = EaseInOutQuad),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "scale"
+    )
+    
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = -5f,
+        targetValue = 5f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(300, easing = EaseInOutQuad),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "rotation"
+    )
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = CardBackground,
+        title = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "🔥",
+                    fontSize = 64.sp,
+                    modifier = Modifier
+                        .graphicsLayer {
+                            scaleX = scale
+                            scaleY = scale
+                            rotationZ = rotation
+                        }
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Streak!",
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFFF6B35)
+                )
+            }
+        },
+        text = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "You stayed under budget last month!",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = TextPrimary,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "$streakCount month${if (streakCount > 1) "s" else ""} streak",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AccentGreen
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Keep it up! 💪",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Awesome!", color = AccentGreen, fontWeight = FontWeight.Bold)
+            }
+        }
+    )
 }

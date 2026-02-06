@@ -58,6 +58,10 @@ class MainViewModel @Inject constructor(
     init {
         // FOR TESTING: Unlock all tiers by default
         geminiServiceManager.unlockAllTiers()
+        
+        // Load streak data and check for pending celebrations
+        loadStreakData()
+        checkAndUpdateStreak()
     }
     
     // Date Filter State
@@ -191,6 +195,94 @@ class MainViewModel @Inject constructor(
         }
     }
     
+    // ==================== STREAK TRACKING ====================
+    
+    private val _streakCount = MutableStateFlow(0)
+    val streakCount: StateFlow<Int> = _streakCount.asStateFlow()
+    
+    private val _showStreakCelebration = MutableStateFlow(false)
+    val showStreakCelebration: StateFlow<Boolean> = _showStreakCelebration.asStateFlow()
+    
+    private fun loadStreakData() {
+        _streakCount.value = prefs.getInt("streak_count", 0)
+    }
+    
+    fun checkAndUpdateStreak() {
+        // Only check for previous month when it's complete
+        val now = LocalDate.now()
+        val previousMonth = now.minusMonths(1)
+        val previousMonthKey = "budget_${previousMonth.year}_${previousMonth.monthValue}"
+        val celebrationKey = "streak_celebrated_${previousMonth.year}_${previousMonth.monthValue}"
+        
+        // Check if already celebrated this streak
+        if (prefs.getBoolean(celebrationKey, false)) {
+            return
+        }
+        
+        // Get previous month's budget and spending
+        val budget = prefs.getFloat(previousMonthKey, -1f)
+        if (budget <= 0) return // No budget was set
+        
+        // Calculate previous month spending
+        viewModelScope.launch {
+            val startOfPrevMonth = previousMonth.withDayOfMonth(1).atStartOfDay()
+            val endOfPrevMonth = previousMonth.withDayOfMonth(previousMonth.lengthOfMonth()).atTime(java.time.LocalTime.MAX)
+            val formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
+            
+            val prevMonthExpenses = repository.getExpensesBetween(
+                formatter.format(startOfPrevMonth),
+                formatter.format(endOfPrevMonth)
+            ).first()
+            
+            val prevMonthSpending = prevMonthExpenses.sumOf { it.amount }
+            
+            if (prevMonthSpending <= budget) {
+                // Under budget! Increment streak
+                val newStreak = _streakCount.value + 1
+                _streakCount.value = newStreak
+                prefs.edit()
+                    .putInt("streak_count", newStreak)
+                    .putBoolean(celebrationKey, true)
+                    .apply()
+                
+                // Trigger celebration
+                _showStreakCelebration.value = true
+            } else {
+                // Over budget - reset streak
+                _streakCount.value = 0
+                prefs.edit()
+                    .putInt("streak_count", 0)
+                    .putBoolean(celebrationKey, true) // Mark as checked
+                    .apply()
+            }
+        }
+    }
+    
+    fun dismissStreakCelebration() {
+        _showStreakCelebration.value = false
+    }
+    
+    fun isMonthUnderBudget(year: Int, month: Int): Boolean? {
+        val budgetKey = "budget_${year}_${month}"
+        val budget = prefs.getFloat(budgetKey, -1f)
+        if (budget <= 0) return null // No budget set
+        
+        // For current/future months, we can't determine yet
+        val now = LocalDate.now()
+        if (year > now.year || (year == now.year && month >= now.monthValue)) {
+            return null
+        }
+        
+        // Check the celebration key - if celebrated with streak increment, it was under budget
+        val celebrationKey = "streak_celebrated_${year}_${month}"
+        val wasCelebrated = prefs.getBoolean(celebrationKey, false)
+        if (!wasCelebrated) return null
+        
+        // Read streak status for that month
+        val streakKey = "streak_status_${year}_${month}"
+        return prefs.getBoolean(streakKey, false)
+    }
+    
     // ==================== AI ANALYSIS ====================
 
     fun loadAiAnalysis(forceRefresh: Boolean = false) {
@@ -242,6 +334,11 @@ class MainViewModel @Inject constructor(
             TimePeriod.YEAR -> _currentDate.value.minusYears(1)
             TimePeriod.ALL -> _currentDate.value // No op
         }
+        loadBudgetForCurrentMonth()
+    }
+    
+    fun setDate(date: LocalDate) {
+        _currentDate.value = date
         loadBudgetForCurrentMonth()
     }
 

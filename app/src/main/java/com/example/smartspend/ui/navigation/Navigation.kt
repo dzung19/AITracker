@@ -67,6 +67,8 @@ fun SmartSpendNavHost(
     val currentDate by viewModel.currentDate.collectAsState()
     val selectedPeriod by viewModel.selectedPeriod.collectAsState()
     val monthlyBudget by viewModel.monthlyBudget.collectAsState()
+    val streakCount by viewModel.streakCount.collectAsState()
+    val showStreakCelebration by viewModel.showStreakCelebration.collectAsState()
     
     val isScanning by viewModel.isScanning.collectAsState()
     val scannedTitle by viewModel.scannedTitle.collectAsState()
@@ -121,10 +123,14 @@ fun SmartSpendNavHost(
                 installDate = viewModel.installDate,
                 selectedPeriod = selectedPeriod,
                 monthlyBudget = monthlyBudget,
+                streakCount = streakCount,
+                showStreakCelebration = showStreakCelebration,
+                onDismissStreak = { viewModel.dismissStreakCelebration() },
                 onSetBudget = { viewModel.setMonthlyBudget(it) },
                 onPeriodSelected = { viewModel.setTimePeriod(it) },
                 onPreviousPeriod = { viewModel.previousPeriod() },
                 onNextPeriod = { viewModel.nextPeriod() },
+                onDateSelected = { viewModel.setDate(it) },
                 onAddClick = { navController.navigate(Screen.AddExpense.route) },
                 onDeleteClick = { expense -> viewModel.deleteExpense(expense) },
                 onExpenseClick = { expenseId ->
