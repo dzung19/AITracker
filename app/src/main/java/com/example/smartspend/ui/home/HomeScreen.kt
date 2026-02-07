@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Settings
 import kotlinx.coroutines.launch
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -71,6 +72,8 @@ fun HomeScreen(
     onExpenseClick: (Long) -> Unit,
     onTotalClick: () -> Unit,
     onTierManagementClick: () -> Unit,
+    onDebugSimulate: (Boolean) -> Unit,
+    onDebugReset: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val currencyFormatter = remember { NumberFormat.getCurrencyInstance(Locale.getDefault()) }
@@ -82,6 +85,9 @@ fun HomeScreen(
     
     // Date picker dialog state
     var showDatePicker by remember { mutableStateOf(false) }
+
+    // Debug dialog state
+    var showDebugDialog by remember { mutableStateOf(false) }
     
     // Streak celebration dialog
     if (showStreakCelebration) {
@@ -148,6 +154,25 @@ fun HomeScreen(
                     colors = NavigationDrawerItemDefaults.colors(
                         unselectedIconColor = TextSecondary,
                         unselectedTextColor = TextSecondary
+                    )
+                )
+
+                // Debug Tools (Bottom of Drawer)
+                Spacer(modifier = Modifier.weight(1f))
+                NavigationDrawerItem(
+                    label = { Text("Debug Tools") },
+                    selected = false,
+                    onClick = {
+                        scope.launch {
+                            drawerState.close()
+                            showDebugDialog = true
+                        }
+                    },
+                    icon = { Icon(Icons.Default.Settings, contentDescription = null) }, // Settings/Build icon
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
+                    colors = NavigationDrawerItemDefaults.colors(
+                        unselectedIconColor = TextSecondary.copy(alpha = 0.5f),
+                        unselectedTextColor = TextSecondary.copy(alpha = 0.5f)
                     )
                 )
             }
@@ -332,6 +357,21 @@ fun HomeScreen(
             onConfirm = { selectedDate ->
                 onDateSelected(selectedDate)
                 showDatePicker = false
+            }
+        )
+    }
+
+    // Debug Dialog
+    if (showDebugDialog) {
+        DebugStreakDialog(
+            onDismiss = { showDebugDialog = false },
+            onSimulate = { isSuccess ->
+                onDebugSimulate(isSuccess)
+                showDebugDialog = false
+            },
+            onReset = {
+                onDebugReset()
+                showDebugDialog = false
             }
         )
     }
@@ -997,6 +1037,64 @@ private fun StreakCelebrationDialog(
         confirmButton = {
             TextButton(onClick = onDismiss) {
                 Text("Awesome!", color = AccentGreen, fontWeight = FontWeight.Bold)
+            }
+        }
+    )
+}
+
+@Composable
+private fun DebugStreakDialog(
+    onDismiss: () -> Unit,
+    onSimulate: (Boolean) -> Unit,
+    onReset: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = CardBackground,
+        titleContentColor = TextPrimary,
+        textContentColor = TextSecondary,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Settings, contentDescription = null, tint = TextSecondary)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Debug Streak Tools")
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "Use these tools to force specific streak scenarios (requires restart or refresh if not instant):",
+                    color = TextSecondary
+                )
+                
+                Button(
+                    onClick = { onSimulate(true) },
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentGreen),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("✅ Simulate Success (Win)", color = Color.White)
+                }
+                
+                Button(
+                    onClick = { onSimulate(false) },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF5350)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("❌ Simulate Failure (Loss)", color = Color.White)
+                }
+                
+                OutlinedButton(
+                    onClick = onReset,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary)
+                ) {
+                    Text("🔄 Reset Streak")
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close", color = TextSecondary)
             }
         }
     )

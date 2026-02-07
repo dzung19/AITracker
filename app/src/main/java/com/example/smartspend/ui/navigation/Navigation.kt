@@ -137,7 +137,9 @@ fun SmartSpendNavHost(
                     navController.navigate(Screen.ExpenseDetail.createRoute(expenseId))
                 },
                 onTotalClick = { navController.navigate(Screen.Analytics.route) },
-                onTierManagementClick = { navController.navigate(Screen.TierManagement.route) }
+                onTierManagementClick = { navController.navigate(Screen.TierManagement.route) },
+                onDebugSimulate = { isSuccess -> viewModel.debugSimulateStreak(isSuccess) },
+                onDebugReset = { viewModel.debugResetStreak() }
             )
         }
         
