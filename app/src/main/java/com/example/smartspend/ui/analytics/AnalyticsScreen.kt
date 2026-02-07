@@ -72,6 +72,7 @@ private val AccentPurple = Color(0xFF764BA2)
 @Composable
 fun AnalyticsScreen(
     expenses: List<Expense>,
+    monthlyBudget: Double,
     aiAnalysis: String?,
     isAnalyzing: Boolean,
     chatService: ChatService,
@@ -162,6 +163,7 @@ fun AnalyticsScreen(
             ) {
                 AnalyticsChatBottomSheetContent(
                     expenses = expenses,
+                    monthlyBudget = monthlyBudget,
                     chatService = chatService
                 )
             }
@@ -408,6 +410,7 @@ fun AiAnalysisCard(
 @Composable
 fun AnalyticsChatBottomSheetContent(
     expenses: List<Expense>,
+    monthlyBudget: Double,
     chatService: ChatService
 ) {
     val totalFormat =
@@ -447,7 +450,7 @@ fun AnalyticsChatBottomSheetContent(
 
             scope.launch {
                 isLoading = true
-                val response = chatService.generateAnalyticsResponse(query, expenses)
+                val response = chatService.generateAnalyticsResponse(query, expenses, monthlyBudget)
                 isLoading = false
                 messages = messages + response
                 listState.animateScrollToItem(messages.size - 1)

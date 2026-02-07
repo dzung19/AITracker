@@ -109,7 +109,7 @@ class GeminiServiceManager @Inject constructor(
     /**
      * Analyze spending with caching strategy (7-day validity)
      */
-    suspend fun analyzeSpending(expenses: List<Expense>, period: String, forceRefresh: Boolean = false): String? {
+    suspend fun analyzeSpending(expenses: List<Expense>, period: String, budget: Double? = null, forceRefresh: Boolean = false): String? {
         val currentTime = System.currentTimeMillis()
         val cached = _summaryCache[period]
 
@@ -123,7 +123,7 @@ class GeminiServiceManager @Inject constructor(
         }
 
         // Fetch fresh from AI
-        val result = _geminiService?.analyzeSpending(expenses, period)
+        val result = _geminiService?.analyzeSpending(expenses, period, budget)
         
         // Update cache if successful
         if (result != null) {

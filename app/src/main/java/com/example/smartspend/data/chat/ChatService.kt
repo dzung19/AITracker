@@ -46,7 +46,7 @@ class ChatService @Inject constructor(
         return ChatMessage(text = responseText, isUser = false)
     }
 
-    suspend fun generateAnalyticsResponse(message: String, expenses: List<Expense>): ChatMessage {
+    suspend fun generateAnalyticsResponse(message: String, expenses: List<Expense>, budget: Double): ChatMessage {
         val total = expenses.sumOf { it.amount }
         val topCategory = expenses.groupBy { it.category }
             .maxByOrNull { it.value.sumOf { exp -> exp.amount } }
@@ -59,12 +59,15 @@ class ChatService @Inject constructor(
                 
                 **Financial Data:**
                 - Total Spending: ${currencyFormat.format(total)}
+                - Monthly Budget: ${currencyFormat.format(budget)}
                 - Transactions: ${expenses.size}
                 - Highest Cost Category: $topCategory
                 
                 **User Question:** "$message"
                 
                 **Instructions:**
+                - If spending > budget, give a mild warning.
+                - If spending < budget, encourage them to save the difference.
                 - Provide specific, actionable advice based on the data.
                 - If the user asks for savings, suggest cutting down on the top category.
                 - Be friendly, concise (max 3 sentences), and motivational.

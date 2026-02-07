@@ -157,6 +157,7 @@ fun SmartSpendNavHost(
         composable(Screen.Analytics.route) {
             AnalyticsScreen(
                 expenses = expenses,
+                monthlyBudget = monthlyBudget ?: 0.0,
                 aiAnalysis = aiAnalysis,
                 isAnalyzing = isAnalyzing,
                 chatService = viewModel.chatService,

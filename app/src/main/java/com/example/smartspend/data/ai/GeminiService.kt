@@ -365,7 +365,8 @@ INSTRUCTIONS:
    - Entertainment (Movies, Games, Events)
    - Bills (Electricity, Water, Internet, Phone)
    - Investment (Stocks, Crypto, Gold, Savings)
-   - Other (Services, Medical, Education)
+   - Medical (Pharmacy, Hospital, Doctor, Medicine, Thuoc)
+   - Other (Services, Education)
 
 4. Extract a NOTE (Short Summary):
    - List 2-3 main items purchased (e.g., "Latte, Croissant" or "Milk, Eggs, Bread").
@@ -423,7 +424,7 @@ IMPORTANT: Return ONLY the raw JSON. No markdown formatting, no code blocks, no 
     /**
      * Analyzes a list of expenses and provides a financial summary.
      */
-    suspend fun analyzeSpending(expenses: List<Expense>, period: String): String? {
+    suspend fun analyzeSpending(expenses: List<Expense>, period: String, budget: Double? = null): String? {
         if (expenses.isEmpty()) return "No expenses recorded for $period. Add some expenses to get insights! 📊"
 
         // Use dynamic locale for currency formatting
@@ -431,6 +432,7 @@ IMPORTANT: Return ONLY the raw JSON. No markdown formatting, no code blocks, no 
         
         val total = expenses.sumOf { it.amount }
         val formattedTotal = currencyFormat.format(total)
+        val budgetInfo = if (budget != null && budget > 0) "Budget: ${currencyFormat.format(budget)}" else "Budget: Not set"
         
         // Format: Category (Amount)
         val categories = expenses.groupBy { it.category }
@@ -444,12 +446,14 @@ IMPORTANT: Return ONLY the raw JSON. No markdown formatting, no code blocks, no 
         
         DATA:
         Total Spending: $formattedTotal
+        $budgetInfo
         Top Categories: $categories
         Count: ${expenses.size} expenses
         
         INSTRUCTIONS:
         - Provide a brief summary of the spending habits.
         - Point out any potential concerns (e.g. if one category dominates).
+        - If budget is set, comment on whether they are on track.
         - Offer 1 specific, actionable tip for saving based on these categories.
         - Keep it friendly, encouraging, and under 60 words.
         - Use emojis to make it engaging.

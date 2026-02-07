@@ -361,10 +361,12 @@ class MainViewModel @Inject constructor(
             TimePeriod.ALL -> "All Time"
         }
 
+        val budget = if (selectedPeriod.value == TimePeriod.MONTH) _monthlyBudget.value else null
+
         viewModelScope.launch {
             _isAnalyzing.value = true
             try {
-                val result = geminiServiceManager.analyzeSpending(currentExpenses, periodName, forceRefresh)
+                val result = geminiServiceManager.analyzeSpending(currentExpenses, periodName, budget, forceRefresh)
                 _aiAnalysis.value = result
             } catch (e: Exception) {
                 Log.e("MainViewModel", "Analysis error", e)
