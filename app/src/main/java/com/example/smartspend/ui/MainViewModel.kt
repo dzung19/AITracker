@@ -55,6 +55,13 @@ class MainViewModel @Inject constructor(
     // Monthly Budget - stored per month in SharedPreferences
     private val _monthlyBudget = MutableStateFlow<Double?>(null)
     val monthlyBudget: StateFlow<Double?> = _monthlyBudget.asStateFlow()
+
+    // Streak State
+    private val _streakCount = MutableStateFlow(0)
+    val streakCount: StateFlow<Int> = _streakCount.asStateFlow()
+
+    private val _showStreakCelebration = MutableStateFlow(false)
+    val showStreakCelebration: StateFlow<Boolean> = _showStreakCelebration.asStateFlow()
     
     init {
         // FOR TESTING: Unlock all tiers by default
@@ -197,12 +204,6 @@ class MainViewModel @Inject constructor(
     }
     
     // ==================== STREAK TRACKING ====================
-    
-    private val _streakCount = MutableStateFlow(0)
-    val streakCount: StateFlow<Int> = _streakCount.asStateFlow()
-    
-    private val _showStreakCelebration = MutableStateFlow(false)
-    val showStreakCelebration: StateFlow<Boolean> = _showStreakCelebration.asStateFlow()
     
     private fun loadStreakData() {
         _streakCount.value = prefs.getInt("streak_count", 0)
