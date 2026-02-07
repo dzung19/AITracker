@@ -35,6 +35,8 @@ android {
 
         // Expose API key via BuildConfig (stored in local.properties, not in git)
         buildConfigField("String", "GEMINI_API_KEY", "\"${localProperties.getProperty("GEMINI_API_KEY", "")}\"")
+        buildConfigField("String", "R2_MODEL_URL", "\"${localProperties.getProperty("R2_MODEL_URL", "")}\"")
+        buildConfigField("String", "R2_API_TOKEN", "\"${localProperties.getProperty("R2_API_TOKEN", "")}\"")
     }
 
     buildTypes {
@@ -106,6 +108,9 @@ dependencies {
 
     // Serialization
     implementation(libs.kotlinx.serialization.json)
+
+    // Networking
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

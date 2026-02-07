@@ -43,9 +43,23 @@ class MainViewModel @Inject constructor(
     private val repository: ExpenseRepository,
     private val receiptScanner: ReceiptScannerService,
     private val geminiServiceManager: GeminiServiceManager,
+    private val modelDownloadManager: com.example.smartspend.data.ai.ModelDownloadManager,
     val chatService: com.example.smartspend.data.chat.ChatService,
     private val prefs: SharedPreferences
 ) : ViewModel() {
+
+    // Model Download State
+    val modelDownloadStatus = modelDownloadManager.downloadStatus
+    
+    fun downloadOfflineModel() {
+        viewModelScope.launch {
+            modelDownloadManager.downloadModel()
+        }
+    }
+    
+    fun deleteOfflineModel() {
+        modelDownloadManager.deleteModel()
+    }
     
     // Install date - the earliest date users can navigate to
     val installDate: LocalDate = run {

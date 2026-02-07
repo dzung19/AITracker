@@ -15,6 +15,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
@@ -77,7 +83,9 @@ fun AnalyticsScreen(
     isAnalyzing: Boolean,
     chatService: ChatService,
     onNavigateBack: () -> Unit,
-    onAnalyzeClick: () -> Unit
+    onAnalyzeClick: () -> Unit,
+    downloadStatus: com.example.smartspend.data.ai.ModelDownloadManager.DownloadStatus,
+    onDownloadClick: () -> Unit
 ) {
     val context = LocalContext.current
     var showBottomSheet by remember { mutableStateOf(false) }
@@ -97,6 +105,45 @@ fun AnalyticsScreen(
                             contentDescription = "Back",
                             tint = TextPrimary
                         )
+                    }
+                },
+                actions = {
+                    // Download Action
+                    when (downloadStatus) {
+                        is com.example.smartspend.data.ai.ModelDownloadManager.DownloadStatus.Idle -> {
+                            IconButton(onClick = onDownloadClick) {
+                                Icon(
+                                    imageVector = Icons.Filled.Info, // Or Download if available
+                                    contentDescription = "Download Offline Model",
+                                    tint = TextSecondary
+                                )
+                            }
+                        }
+                        is com.example.smartspend.data.ai.ModelDownloadManager.DownloadStatus.Downloading -> {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp).padding(4.dp),
+                                color = AccentGreen,
+                                strokeWidth = 2.dp
+                            )
+                        }
+                        is com.example.smartspend.data.ai.ModelDownloadManager.DownloadStatus.Completed -> {
+                            // Optionally hide or show a confirmation
+                            Icon(
+                                imageVector = Icons.Filled.Check,
+                                contentDescription = "Offline Ready",
+                                tint = AccentGreen,
+                                modifier = Modifier.padding(end = 12.dp)
+                            )
+                        }
+                        is com.example.smartspend.data.ai.ModelDownloadManager.DownloadStatus.Error -> {
+                            IconButton(onClick = onDownloadClick) {
+                                Icon(
+                                    imageVector = Icons.Filled.Warning,
+                                    contentDescription = "Retry Download",
+                                    tint = Color(0xFFEF5350)
+                                )
+                            }
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

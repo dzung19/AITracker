@@ -162,7 +162,9 @@ fun SmartSpendNavHost(
                 isAnalyzing = isAnalyzing,
                 chatService = viewModel.chatService,
                 onNavigateBack = { navController.safePopBackStack() },
-                onAnalyzeClick = { viewModel.loadAiAnalysis(forceRefresh = true) }
+                onAnalyzeClick = { viewModel.loadAiAnalysis(forceRefresh = true) },
+                downloadStatus = viewModel.modelDownloadStatus.collectAsState().value,
+                onDownloadClick = { viewModel.downloadOfflineModel() }
             )
         }
 

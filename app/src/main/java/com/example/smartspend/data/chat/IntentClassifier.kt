@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.example.smartspend.data.ai.DeviceCapabilityManager
 import com.example.smartspend.data.ai.DeviceCapabilityManager.ModelTier
+import com.example.smartspend.data.ai.ModelDownloadManager
 import com.google.mediapipe.tasks.core.BaseOptions
 import com.google.mediapipe.tasks.core.Delegate
 import com.google.mediapipe.tasks.text.textclassifier.TextClassifier
@@ -23,7 +24,8 @@ import javax.inject.Singleton
 @Singleton
 class IntentClassifier @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val deviceCapabilityManager: DeviceCapabilityManager
+    private val deviceCapabilityManager: DeviceCapabilityManager,
+    private val modelDownloadManager: ModelDownloadManager
 ) {
     private var classifier: TextClassifier? = null
     private val currentTier: ModelTier
@@ -60,7 +62,16 @@ class IntentClassifier @Inject constructor(
             
             // Build base options with optional NNAPI delegate
             val baseOptionsBuilder = BaseOptions.builder()
-                .setModelAssetPath(modelFile)
+
+            // Check for downloaded model first
+            val localModel = modelDownloadManager.getLocalModelPath()
+            if (localModel != null) {
+                Log.d(TAG, "Using downloaded offline model: ${localModel.absolutePath}")
+                baseOptionsBuilder.setModelAssetPath(localModel.absolutePath)
+            } else {
+                Log.d(TAG, "Using bundled asset model: $modelFile")
+                baseOptionsBuilder.setModelAssetPath(modelFile)
+            }
             
             // Enable NNAPI hardware acceleration if available
             if (deviceCapabilityManager.isNnapiAvailable() && currentTier == ModelTier.FULL) {
