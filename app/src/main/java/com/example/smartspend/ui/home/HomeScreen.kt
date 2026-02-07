@@ -959,6 +959,12 @@ private fun StreakCelebrationDialog(
     streakCount: Int,
     onDismiss: () -> Unit
 ) {
+    // Auto-dismiss after 7 seconds
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(7000)
+        onDismiss()
+    }
+
     // Animation for the fire emoji
     val infiniteTransition = rememberInfiniteTransition(label = "streak")
     val scale by infiniteTransition.animateFloat(
