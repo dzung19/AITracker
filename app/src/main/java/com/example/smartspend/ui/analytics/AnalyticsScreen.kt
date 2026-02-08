@@ -507,14 +507,18 @@ fun AnalyticsChatBottomSheetContent(
 
     Column(
         modifier = Modifier
+            .fillMaxWidth()
+            .imePadding() // Handle keyboard insets - pushes content above keyboard
             .padding(16.dp)
-            .navigationBarsPadding() // Key fix: Push content up above nav bar
+            .navigationBarsPadding()
     ) {
-        // Chat List - scrollable with max height
+        // Chat List - scrollable, takes remaining space above input
+        // Use weight to allow it to shrink when keyboard appears
         LazyColumn(
             state = listState,
             modifier = Modifier
-                .heightIn(max = 300.dp)
+                .weight(1f, fill = false) // Can shrink but not required to fill
+                .heightIn(min = 100.dp, max = 300.dp)
                 .fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -530,7 +534,7 @@ fun AnalyticsChatBottomSheetContent(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         // Suggestion Chips (New Feature)
         LazyRow(
@@ -555,15 +559,19 @@ fun AnalyticsChatBottomSheetContent(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Input Area
+        // Input Area - Fixed height, won't shrink
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp), // Fixed height prevents shrinking
             verticalAlignment = Alignment.CenterVertically
         ) {
             OutlinedTextField(
                 value = inputText,
                 onValueChange = { inputText = it },
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(), // Fill the fixed row height
                 placeholder = { Text("Ask for insights...", color = TextSecondary) },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = TextPrimary,
@@ -573,8 +581,9 @@ fun AnalyticsChatBottomSheetContent(
                     unfocusedBorderColor = TextSecondary
                 ),
                 shape = RoundedCornerShape(24.dp),
+                singleLine = true, // Prevent multi-line expansion
                 keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Send),
-                keyboardActions = KeyboardActions(onDone = { sendMessage(inputText) })
+                keyboardActions = KeyboardActions(onSend = { sendMessage(inputText) })
             )
 
             Spacer(modifier = Modifier.width(8.dp))
@@ -592,7 +601,7 @@ fun AnalyticsChatBottomSheetContent(
                 )
             }
         }
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
     }
 }
 

@@ -74,6 +74,7 @@ fun HomeScreen(
     onTierManagementClick: () -> Unit,
     onDebugSimulate: (Boolean) -> Unit,
     onDebugReset: () -> Unit,
+    isMonthUnderBudget: (Int, Int) -> Boolean?,
     modifier: Modifier = Modifier
 ) {
     val currencyFormatter = remember { NumberFormat.getCurrencyInstance(Locale.getDefault()) }
@@ -353,6 +354,7 @@ fun HomeScreen(
         MonthYearPickerDialog(
             currentDate = currentDate,
             installDate = installDate,
+            isMonthUnderBudget = isMonthUnderBudget,
             onDismiss = { showDatePicker = false },
             onConfirm = { selectedDate ->
                 onDateSelected(selectedDate)
@@ -446,6 +448,7 @@ private fun BudgetDialog(
 private fun MonthYearPickerDialog(
     currentDate: LocalDate,
     installDate: LocalDate,
+    isMonthUnderBudget: (Int, Int) -> Boolean?,
     onDismiss: () -> Unit,
     onConfirm: (LocalDate) -> Unit
 ) {
@@ -534,15 +537,30 @@ private fun MonthYearPickerDialog(
                                             .padding(vertical = 12.dp),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Text(
-                                            text = months[monthIndex],
-                                            color = when {
-                                                isSelected -> Color.Black
-                                                isDisabled || isBeforeInstall -> TextSecondary.copy(alpha = 0.3f)
-                                                else -> TextPrimary
-                                            },
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                        )
+                                        // Check if this month has a streak
+                                        val hasStreak = isMonthUnderBudget(selectedYear, monthNum) == true
+                                        
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.Center
+                                        ) {
+                                            Text(
+                                                text = months[monthIndex],
+                                                color = when {
+                                                    isSelected -> Color.Black
+                                                    isDisabled || isBeforeInstall -> TextSecondary.copy(alpha = 0.3f)
+                                                    else -> TextPrimary
+                                                },
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                            )
+                                            if (hasStreak) {
+                                                Spacer(modifier = Modifier.width(2.dp))
+                                                Text(
+                                                    text = "🔥",
+                                                    fontSize = 10.sp
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
