@@ -65,6 +65,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.core.graphics.toColorInt
 
 // Reusing colors
 private val SurfaceBackground = Color(0xFF121218)
@@ -454,7 +455,7 @@ fun MonthlySpendingBarChart(expenses: List<Expense>) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 12.dp, vertical = 10.dp)
+                .padding(horizontal = 12.dp, vertical = 20.dp)
         ) {
             // Average indicator
             if (average > 0) {
@@ -473,9 +474,9 @@ fun MonthlySpendingBarChart(expenses: List<Expense>) {
                     .weight(1f)
             ) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
-                    val barWidth = (size.width - 40.dp.toPx()) / 6f
+                    val barWidth = (size.width - 16.dp.toPx()) / 6f
                     val chartHeight = size.height - 28.dp.toPx()
-                    val startX = 20.dp.toPx()
+                    val startX = 8.dp.toPx()
                     
                     // Draw average line
                     if (average > 0) {
@@ -522,7 +523,7 @@ fun MonthlySpendingBarChart(expenses: List<Expense>) {
                         // Draw month label centered under each bar
                         drawContext.canvas.nativeCanvas.apply {
                             val textPaint = android.graphics.Paint().apply {
-                                color = android.graphics.Color.parseColor("#B0B0C0")
+                                color = "#B0B0C0".toColorInt()
                                 textSize = 11.dp.toPx()
                                 textAlign = android.graphics.Paint.Align.CENTER
                                 isAntiAlias = true

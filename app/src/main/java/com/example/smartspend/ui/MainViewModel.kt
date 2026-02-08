@@ -86,6 +86,9 @@ class MainViewModel @Inject constructor(
         // Load streak data and check for pending celebrations
         loadStreakData()
         checkAndUpdateStreak()
+        
+        // Load saved AI analysis for current month
+        loadSavedAnalysis()
     }
     
     // Date Filter State
@@ -152,6 +155,37 @@ class MainViewModel @Inject constructor(
 
     private val _isAnalyzing = MutableStateFlow(false)
     val isAnalyzing: StateFlow<Boolean> = _isAnalyzing.asStateFlow()
+    
+    // Helper to get analysis key for current period
+    private fun getAnalysisKey(): String {
+        val date = _currentDate.value
+        return when (_selectedPeriod.value) {
+            TimePeriod.MONTH -> "analysis_${date.year}_${date.monthValue}"
+            TimePeriod.YEAR -> "analysis_year_${date.year}"
+            TimePeriod.ALL -> "analysis_all_time"
+        }
+    }
+    
+    // Load saved analysis from SharedPreferences
+    // Uses optional params for init phase when flows might not be initialized yet
+    private fun loadSavedAnalysis(
+        date: LocalDate = LocalDate.now(), 
+        period: TimePeriod = TimePeriod.MONTH
+    ) {
+        val key = when (period) {
+            TimePeriod.MONTH -> "analysis_${date.year}_${date.monthValue}"
+            TimePeriod.YEAR -> "analysis_year_${date.year}"
+            TimePeriod.ALL -> "analysis_all_time"
+        }
+        val savedAnalysis = prefs.getString(key, null)
+        _aiAnalysis.value = savedAnalysis
+    }
+    
+    // Save analysis to SharedPreferences
+    private fun saveAnalysis(analysis: String) {
+        val key = getAnalysisKey()
+        prefs.edit().putString(key, analysis).apply()
+    }
 
     // Selected Expense for Detail View
     private val _selectedExpense = MutableStateFlow<Expense?>(null)
@@ -390,7 +424,8 @@ class MainViewModel @Inject constructor(
                 try {
                     val result = geminiServiceManager.analyzeSpending(currentExpenses, periodName, budget, forceRefresh)
                     if (result != null) {
-                       _aiAnalysis.value = result 
+                       _aiAnalysis.value = result
+                       saveAnalysis(result) // Persist the analysis 
                     } else {
                         throw java.io.IOException("Network/Service unavailable")
                     }
@@ -403,6 +438,7 @@ class MainViewModel @Inject constructor(
                         // But users perceive "AI Model" as "Intelligence", so valid heuristics work well here.
                         val localAnalysis = localFinancialAnalyzer.analyze(currentExpenses, budget, periodName)
                         _aiAnalysis.value = localAnalysis
+                        saveAnalysis(localAnalysis) // Persist the analysis
                     } else {
                         _aiAnalysis.value = "Analysis failed. Please check internet connection OR download the Offline Model for basic insights. 📥"
                     }
