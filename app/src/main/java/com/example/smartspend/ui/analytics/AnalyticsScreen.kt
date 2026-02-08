@@ -190,7 +190,16 @@ fun AnalyticsScreen(
                 EmptyChartState()
             }
 
-            // 2. AI Analysis Section
+            // 2. Monthly Spending Trend (NEW)
+            Text(
+                text = "6-Month Spending Trend",
+                style = MaterialTheme.typography.titleMedium,
+                color = TextSecondary
+            )
+
+            MonthlySpendingBarChart(expenses = expenses)
+
+            // 3. AI Analysis Section
             Text(
                 text = "AI Financial Advisor",
                 style = MaterialTheme.typography.titleMedium,
@@ -382,6 +391,191 @@ private fun createPolygonPath(sides: Int, radius: Float, center: Offset, stepAng
     }
     path.close()
     return path
+}
+
+/**
+ * Bar Chart showing spending for the last 6 months with average line
+ */
+@Composable
+fun MonthlySpendingBarChart(expenses: List<Expense>) {
+    val currencyFormatter = remember { java.text.NumberFormat.getCurrencyInstance() }
+    
+    // Calculate monthly totals for the last 6 months
+    val monthlyData = remember(expenses) {
+        val now = java.time.LocalDate.now()
+        val formatter = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME
+        
+        // Create list of last 6 months (including current)
+        val months = (5 downTo 0).map { monthsAgo ->
+            now.minusMonths(monthsAgo.toLong())
+        }
+        
+        months.map { month ->
+            val monthStart = month.withDayOfMonth(1)
+            val monthEnd = month.withDayOfMonth(month.lengthOfMonth())
+            
+            val total = expenses.filter { expense ->
+                try {
+                    val expenseDate = java.time.LocalDateTime.parse(expense.date, formatter).toLocalDate()
+                    expenseDate >= monthStart && expenseDate <= monthEnd
+                } catch (e: Exception) {
+                    false
+                }
+            }.sumOf { it.amount }
+            
+            val monthLabel = month.format(java.time.format.DateTimeFormatter.ofPattern("MMM"))
+            monthLabel to total
+        }
+    }
+    
+    val maxValue = remember(monthlyData) { 
+        monthlyData.maxOfOrNull { it.second }?.coerceAtLeast(1.0) ?: 1.0 
+    }
+    val average = remember(monthlyData) { 
+        val nonZeroMonths = monthlyData.filter { it.second > 0 }
+        if (nonZeroMonths.isNotEmpty()) nonZeroMonths.sumOf { it.second } / nonZeroMonths.size 
+        else 0.0 
+    }
+    
+    // Animation
+    val animatedProgress = remember { Animatable(0f) }
+    LaunchedEffect(monthlyData) {
+        animatedProgress.snapTo(0f)
+        animatedProgress.animateTo(1f, animationSpec = tween(800))
+    }
+    
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(280.dp),
+        colors = CardDefaults.cardColors(containerColor = CardBackground),
+        shape = RoundedCornerShape(24.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 12.dp, vertical = 10.dp)
+        ) {
+            // Average indicator
+            if (average > 0) {
+                Text(
+                    text = "Avg: ${currencyFormatter.format(average)}/month",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+            
+            // Chart area
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            ) {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val barWidth = (size.width - 40.dp.toPx()) / 6f
+                    val chartHeight = size.height - 28.dp.toPx()
+                    val startX = 20.dp.toPx()
+                    
+                    // Draw average line
+                    if (average > 0) {
+                        val avgY = chartHeight - (average / maxValue * chartHeight).toFloat()
+                        drawLine(
+                            color = AccentPurple,
+                            start = Offset(startX, avgY),
+                            end = Offset(size.width - 10.dp.toPx(), avgY),
+                            strokeWidth = 2.dp.toPx(),
+                            pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(
+                                floatArrayOf(10f, 10f)
+                            )
+                        )
+                    }
+                    
+                    // Draw bars and labels
+                    monthlyData.forEachIndexed { index, (month, value) ->
+                        val barHeight = if (maxValue > 0) {
+                            (value / maxValue * chartHeight * animatedProgress.value).toFloat()
+                        } else 0f
+                        
+                        // Calculate bar center position
+                        val barCenterX = startX + index * barWidth + barWidth / 2
+                        val barActualWidth = barWidth * 0.6f
+                        val x = barCenterX - barActualWidth / 2
+                        
+                        // Bar gradient effect
+                        val barColor = if (value >= average && average > 0) {
+                            Color(0xFFEF5350) // Red if above average
+                        } else {
+                            AccentGreen // Green if below average
+                        }
+                        
+                        // Draw bar
+                        if (barHeight > 0) {
+                            drawRoundRect(
+                                color = barColor,
+                                topLeft = Offset(x, chartHeight - barHeight),
+                                size = Size(barActualWidth, barHeight),
+                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(8f, 8f)
+                            )
+                        }
+                        
+                        // Draw month label centered under each bar
+                        drawContext.canvas.nativeCanvas.apply {
+                            val textPaint = android.graphics.Paint().apply {
+                                color = android.graphics.Color.parseColor("#B0B0C0")
+                                textSize = 11.dp.toPx()
+                                textAlign = android.graphics.Paint.Align.CENTER
+                                isAntiAlias = true
+                            }
+                            drawText(
+                                month,
+                                barCenterX,
+                                chartHeight + 18.dp.toPx(),
+                                textPaint
+                            )
+                        }
+                    }
+                }
+            }
+            
+            // Legend
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(12.dp)
+                        .background(AccentGreen, RoundedCornerShape(2.dp))
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Below Avg", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+                
+                Spacer(modifier = Modifier.width(16.dp))
+                
+                Box(
+                    modifier = Modifier
+                        .size(12.dp)
+                        .background(Color(0xFFEF5350), RoundedCornerShape(2.dp))
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Above Avg", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+                
+                Spacer(modifier = Modifier.width(16.dp))
+                
+                Box(
+                    modifier = Modifier
+                        .width(16.dp)
+                        .height(2.dp)
+                        .background(AccentPurple)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Average", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+            }
+        }
+    }
 }
 
 @Composable
