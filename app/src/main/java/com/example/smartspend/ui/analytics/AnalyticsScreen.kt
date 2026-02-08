@@ -108,7 +108,9 @@ fun AnalyticsScreen(
                     }
                 },
                 actions = {
-                    // Download Action
+                    // COMMENTED OUT: Download BERT Model UI
+                    // Temporarily hidden as the offline model feature is being redesigned
+                    /*
                     when (downloadStatus) {
                         is com.example.smartspend.data.ai.ModelDownloadManager.DownloadStatus.Idle -> {
                             IconButton(onClick = onDownloadClick) {
@@ -145,6 +147,7 @@ fun AnalyticsScreen(
                             }
                         }
                     }
+                    */
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = SurfaceBackground
