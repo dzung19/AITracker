@@ -16,6 +16,7 @@ import java.io.FileOutputStream
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
+import java.net.URI
 
 @Singleton
 class ModelDownloadManager @Inject constructor(
@@ -25,12 +26,10 @@ class ModelDownloadManager @Inject constructor(
         private const val TAG = "ModelDownloadManager"
         private const val MODEL_FILENAME = "distilbert_financial.tflite"
         
-        // Cloudflare R2 Configuration
-        // Endpoint: https://<account_id>.r2.cloudflarestorage.com/<bucket>/<key>
-        private const val MODEL_URL = BuildConfig.R2_MODEL_URL
-        
-        // API Token provided by user
-        private const val API_TOKEN = BuildConfig.R2_API_TOKEN
+        // R2 Configuration
+        private const val FULL_URL = BuildConfig.R2_MODEL_URL
+        private const val ACCESS_KEY = BuildConfig.R2_ACCESS_KEY_ID
+        private const val SECRET_KEY = BuildConfig.R2_SECRET_ACCESS_KEY
     }
 
     private val _downloadStatus = MutableStateFlow<DownloadStatus>(DownloadStatus.Idle)
@@ -42,9 +41,6 @@ class ModelDownloadManager @Inject constructor(
         checkLocalModel()
     }
 
-    /**
-     * Check if the model already exists locally
-     */
     fun checkLocalModel() {
         val file = getModelFile()
         if (file.exists() && file.length() > 0) {
@@ -54,17 +50,11 @@ class ModelDownloadManager @Inject constructor(
         }
     }
 
-    /**
-     * Get the local model file if it exists
-     */
     fun getLocalModelPath(): File? {
         val file = getModelFile()
         return if (file.exists() && file.length() > 0) file else null
     }
 
-    /**
-     * Delete the local model file
-     */
     fun deleteModel() {
         val file = getModelFile()
         if (file.exists()) {
@@ -74,33 +64,36 @@ class ModelDownloadManager @Inject constructor(
         }
     }
 
-    /**
-     * Download the model from the configured URL
-     */
     suspend fun downloadModel() {
         withContext(Dispatchers.IO) {
             try {
                 _downloadStatus.value = DownloadStatus.Downloading(0f)
-                Log.d(TAG, "Starting download from: $MODEL_URL")
+                Log.d(TAG, "Starting download from: $FULL_URL")
 
-                val request = Request.Builder()
-                    .url(MODEL_URL)
-                    // Attempting to pass token as Bearer. 
-                    // If R2 rejects this (needs SigV4), we log the error clearly.
-                    .header("Authorization", "Bearer $API_TOKEN")
-                    .build()
+                // Generate SigV4 Headers
+                val headers = AwsSigV4Signer.getSignedHeaders(
+                    method = "GET",
+                    url = FULL_URL,
+                    accessKey = ACCESS_KEY,
+                    secretKey = SECRET_KEY
+                )
 
+                val requestBuilder = Request.Builder().url(FULL_URL)
+                headers.forEach { (key, value) ->
+                    requestBuilder.header(key, value)
+                }
+                
+                val request = requestBuilder.build()
                 val response = client.newCall(request).execute()
 
                 if (!response.isSuccessful) {
-                    throw IOException("Download failed: ${response.code} ${response.message}")
+                    throw IOException("Download failed: ${response.code} ${response.message} body: ${response.body?.string()}")
                 }
 
                 val body = response.body ?: throw IOException("Empty response body")
                 val contentLength = body.contentLength()
                 val file = getModelFile()
                 
-                // Ensure parent directory exists
                 file.parentFile?.mkdirs()
 
                 body.byteStream().use { input ->
@@ -120,14 +113,13 @@ class ModelDownloadManager @Inject constructor(
                         }
                     }
                 }
-                
+
                 Log.d(TAG, "Download complete: ${file.absolutePath}, Size: ${file.length()}")
                 _downloadStatus.value = DownloadStatus.Completed(file)
-                
+
             } catch (e: Exception) {
                 Log.e(TAG, "Download error", e)
                 _downloadStatus.value = DownloadStatus.Error(e.message ?: "Unknown error")
-                // Clean up partial file
                 val file = getModelFile()
                 if (file.exists()) file.delete()
             }
@@ -142,7 +134,7 @@ class ModelDownloadManager @Inject constructor(
 
     sealed class DownloadStatus {
         data object Idle : DownloadStatus()
-        data class Downloading(val progress: Float) : DownloadStatus() // 0.0 to 1.0
+        data class Downloading(val progress: Float) : DownloadStatus()
         data class Completed(val file: File) : DownloadStatus()
         data class Error(val message: String) : DownloadStatus()
     }

@@ -37,6 +37,8 @@ android {
         buildConfigField("String", "GEMINI_API_KEY", "\"${localProperties.getProperty("GEMINI_API_KEY", "")}\"")
         buildConfigField("String", "R2_MODEL_URL", "\"${localProperties.getProperty("R2_MODEL_URL", "")}\"")
         buildConfigField("String", "R2_API_TOKEN", "\"${localProperties.getProperty("R2_API_TOKEN", "")}\"")
+        buildConfigField("String", "R2_ACCESS_KEY_ID", "\"${localProperties.getProperty("R2_ACCESS_KEY_ID", "")}\"")
+        buildConfigField("String", "R2_SECRET_ACCESS_KEY", "\"${localProperties.getProperty("R2_SECRET_ACCESS_KEY", "")}\"")
     }
 
     buildTypes {
