@@ -86,9 +86,6 @@ class MainViewModel @Inject constructor(
         // Load streak data and check for pending celebrations
         loadStreakData()
         checkAndUpdateStreak()
-        
-        // Load saved AI analysis for current month
-        loadSavedAnalysis()
     }
     
     // Date Filter State
@@ -149,8 +146,10 @@ class MainViewModel @Inject constructor(
     private val _scanError = MutableStateFlow<String?>(null)
     val scanError: StateFlow<String?> = _scanError.asStateFlow()
 
-    // AI Analysis State
-    private val _aiAnalysis = MutableStateFlow<String?>(null)
+    // AI Analysis State - load saved analysis on init
+    private val _aiAnalysis = MutableStateFlow<String?>(
+        prefs.getString("analysis_${LocalDate.now().year}_${LocalDate.now().monthValue}", null)
+    )
     val aiAnalysis: StateFlow<String?> = _aiAnalysis.asStateFlow()
 
     private val _isAnalyzing = MutableStateFlow(false)
@@ -166,17 +165,9 @@ class MainViewModel @Inject constructor(
         }
     }
     
-    // Load saved analysis from SharedPreferences
-    // Uses optional params for init phase when flows might not be initialized yet
-    private fun loadSavedAnalysis(
-        date: LocalDate = LocalDate.now(), 
-        period: TimePeriod = TimePeriod.MONTH
-    ) {
-        val key = when (period) {
-            TimePeriod.MONTH -> "analysis_${date.year}_${date.monthValue}"
-            TimePeriod.YEAR -> "analysis_year_${date.year}"
-            TimePeriod.ALL -> "analysis_all_time"
-        }
+    // Load saved analysis when period/date changes
+    fun reloadAnalysisForPeriod() {
+        val key = getAnalysisKey()
         val savedAnalysis = prefs.getString(key, null)
         _aiAnalysis.value = savedAnalysis
     }
@@ -457,6 +448,7 @@ class MainViewModel @Inject constructor(
     fun setTimePeriod(period: TimePeriod) {
         _selectedPeriod.value = period
         loadBudgetForCurrentMonth()
+        reloadAnalysisForPeriod()
     }
 
     fun nextPeriod() {
@@ -466,6 +458,7 @@ class MainViewModel @Inject constructor(
             TimePeriod.ALL -> _currentDate.value // No op
         }
         loadBudgetForCurrentMonth()
+        reloadAnalysisForPeriod()
     }
 
     fun previousPeriod() {
@@ -475,11 +468,13 @@ class MainViewModel @Inject constructor(
             TimePeriod.ALL -> _currentDate.value // No op
         }
         loadBudgetForCurrentMonth()
+        reloadAnalysisForPeriod()
     }
     
     fun setDate(date: LocalDate) {
         _currentDate.value = date
         loadBudgetForCurrentMonth()
+        reloadAnalysisForPeriod()
     }
 
     private fun calculateDateRange(period: TimePeriod, date: LocalDate): Pair<String?, String?> {
