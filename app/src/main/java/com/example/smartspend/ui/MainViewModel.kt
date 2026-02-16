@@ -33,6 +33,8 @@ import kotlinx.coroutines.flow.map
 import com.example.smartspend.di.AppModule
 import java.time.Instant
 import java.time.ZoneId
+import androidx.core.content.edit
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 enum class TimePeriod {
     ALL, MONTH, YEAR
@@ -68,39 +70,63 @@ class MainViewModel @Inject constructor(
         Instant.ofEpochMilli(installMillis).atZone(ZoneId.systemDefault()).toLocalDate()
     }
     
-    // Monthly Budget - stored per month in SharedPreferences
-    private val _monthlyBudget = MutableStateFlow<Double?>(null)
-    val monthlyBudget: StateFlow<Double?> = _monthlyBudget.asStateFlow()
-
-    // Streak State
-    private val _streakCount = MutableStateFlow(0)
-    val streakCount: StateFlow<Int> = _streakCount.asStateFlow()
-
-    private val _showStreakCelebration = MutableStateFlow(false)
-    val showStreakCelebration: StateFlow<Boolean> = _showStreakCelebration.asStateFlow()
-    
-    init {
-        // FOR TESTING: Unlock all tiers by default
-        geminiServiceManager.unlockAllTiers()
-        
-        // Load streak data and check for pending celebrations
-        loadStreakData()
-        checkAndUpdateStreak()
-    }
-    
-    // Date Filter State
+    // ==================== STATE DEFINITIONS ====================
+    // 1. Date Filter State (Must be first for init)
     private val _selectedPeriod = MutableStateFlow(TimePeriod.MONTH)
     val selectedPeriod: StateFlow<TimePeriod> = _selectedPeriod.asStateFlow()
 
     private val _currentDate = MutableStateFlow(LocalDate.now())
     val currentDate: StateFlow<LocalDate> = _currentDate.asStateFlow()
 
+    // 2. AI Analysis State
+    private val _aiAnalysis = MutableStateFlow<String?>(null)
+    val aiAnalysis: StateFlow<String?> = _aiAnalysis.asStateFlow()
+
+    private val _isAnalyzing = MutableStateFlow(false)
+    val isAnalyzing: StateFlow<Boolean> = _isAnalyzing.asStateFlow()
+
+    // 3. Streak State
+    private val _streakCount = MutableStateFlow(0)
+    val streakCount: StateFlow<Int> = _streakCount.asStateFlow()
+
+    private val _showStreakCelebration = MutableStateFlow(false)
+    val showStreakCelebration: StateFlow<Boolean> = _showStreakCelebration.asStateFlow()
+    
+    // 4. Other State
+    private val _monthlyBudget = MutableStateFlow<Double?>(null)
+    val monthlyBudget: StateFlow<Double?> = _monthlyBudget.asStateFlow()
+
     // Computed Date Range Flow
     private val dateRange = combine(_selectedPeriod, _currentDate) { period, date ->
         calculateDateRange(period, date)
     }
 
+    init {
+        Log.d("MainViewModel", "=== APP START ===")
+        
+        // FOR TESTING: Unlock all tiers by default
+        geminiServiceManager.unlockAllTiers()
+        
+        // Load streak data and check for pending celebrations
+        loadStreakData()
+        checkAndUpdateStreak()
+        
+        // React to date range changes (and initial load)
+        viewModelScope.launch {
+            dateRange.collect { (startRange, endRange) ->
+                Log.d("MainViewModel", "Date range updated: $startRange - $endRange")
+                
+                // Reload analysis and budget when period changes
+                loadSavedAnalysis()
+                loadBudgetForCurrentMonth()
+            }
+        }
+    }
+    
+
+
     // Filtered Expenses
+    @OptIn(ExperimentalCoroutinesApi::class)
     val expenses: StateFlow<List<Expense>> = dateRange
         .flatMapLatest { (start, end) ->
             if (start == null || end == null) {
@@ -112,6 +138,7 @@ class MainViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Filtered Total Spending
+    @OptIn(ExperimentalCoroutinesApi::class)
     val totalSpending: StateFlow<Double> = dateRange
         .flatMapLatest { (start, end) ->
             if (start == null || end == null) {
@@ -146,15 +173,6 @@ class MainViewModel @Inject constructor(
     private val _scanError = MutableStateFlow<String?>(null)
     val scanError: StateFlow<String?> = _scanError.asStateFlow()
 
-    // AI Analysis State - load saved analysis on init
-    private val _aiAnalysis = MutableStateFlow<String?>(
-        prefs.getString("analysis_${LocalDate.now().year}_${LocalDate.now().monthValue}", null)
-    )
-    val aiAnalysis: StateFlow<String?> = _aiAnalysis.asStateFlow()
-
-    private val _isAnalyzing = MutableStateFlow(false)
-    val isAnalyzing: StateFlow<Boolean> = _isAnalyzing.asStateFlow()
-    
     // Helper to get analysis key for current period
     private fun getAnalysisKey(): String {
         val date = _currentDate.value
@@ -165,17 +183,19 @@ class MainViewModel @Inject constructor(
         }
     }
     
-    // Load saved analysis when period/date changes
-    fun reloadAnalysisForPeriod() {
+    // Load saved analysis from SharedPreferences
+    private fun loadSavedAnalysis() {
         val key = getAnalysisKey()
         val savedAnalysis = prefs.getString(key, null)
+        Log.e("MainViewModel", "loadSavedAnalysis: key=$key, found=${savedAnalysis != null}, length=${savedAnalysis?.length ?: 0}")
         _aiAnalysis.value = savedAnalysis
     }
     
     // Save analysis to SharedPreferences
     private fun saveAnalysis(analysis: String) {
         val key = getAnalysisKey()
-        prefs.edit().putString(key, analysis).apply()
+        Log.d("MainViewModel", "Saving analysis for key: $key")
+        prefs.edit(commit = true) { putString(key, analysis) }
     }
 
     // Selected Expense for Detail View
@@ -206,20 +226,7 @@ class MainViewModel @Inject constructor(
         geminiServiceManager.unlockAllTiers()
     }
     
-    init {
-        // FOR TESTING: Unlock all tiers by default
-        geminiServiceManager.unlockAllTiers()
-        
-        // Clear analysis when date range changes
-        viewModelScope.launch {
-            dateRange.collect {
-                _aiAnalysis.value = null
-            }
-        }
-        
-        // Load budget for current month on startup
-        loadBudgetForCurrentMonth()
-    }
+
     
     // ==================== BUDGET MANAGEMENT ====================
     
@@ -329,7 +336,7 @@ class MainViewModel @Inject constructor(
             prefs.edit().putFloat(previousMonthKey, 1000f).apply()
             
             // 2. Clear celebration flag to allow re-check
-            prefs.edit().remove(celebrationKey).apply()
+            prefs.edit { remove(celebrationKey) }
             
             // 3. Insert a mock expense for previous month
             // If success: spend 500 (under 1000). If fail: spend 1500 (over 1000)
@@ -355,10 +362,10 @@ class MainViewModel @Inject constructor(
         val celebrationKey = "streak_celebrated_${previousMonth.year}_${previousMonth.monthValue}"
         
         _streakCount.value = 0
-        prefs.edit()
-            .putInt("streak_count", 0)
-            .remove(celebrationKey)
-            .apply()
+        prefs.edit {
+            putInt("streak_count", 0)
+                .remove(celebrationKey)
+        }
     }
     
     fun dismissStreakCelebration() {
@@ -448,7 +455,7 @@ class MainViewModel @Inject constructor(
     fun setTimePeriod(period: TimePeriod) {
         _selectedPeriod.value = period
         loadBudgetForCurrentMonth()
-        reloadAnalysisForPeriod()
+        loadSavedAnalysis()
     }
 
     fun nextPeriod() {
@@ -458,7 +465,7 @@ class MainViewModel @Inject constructor(
             TimePeriod.ALL -> _currentDate.value // No op
         }
         loadBudgetForCurrentMonth()
-        reloadAnalysisForPeriod()
+        loadSavedAnalysis()
     }
 
     fun previousPeriod() {
@@ -468,13 +475,13 @@ class MainViewModel @Inject constructor(
             TimePeriod.ALL -> _currentDate.value // No op
         }
         loadBudgetForCurrentMonth()
-        reloadAnalysisForPeriod()
+        loadSavedAnalysis()
     }
     
     fun setDate(date: LocalDate) {
         _currentDate.value = date
         loadBudgetForCurrentMonth()
-        reloadAnalysisForPeriod()
+        loadSavedAnalysis()
     }
 
     private fun calculateDateRange(period: TimePeriod, date: LocalDate): Pair<String?, String?> {

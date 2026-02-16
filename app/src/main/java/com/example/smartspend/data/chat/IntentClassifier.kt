@@ -47,6 +47,11 @@ class IntentClassifier @Inject constructor(
     }
     
     private fun initializeModel() {
+        // TFLite Model Disabled by User Request
+        Log.i(TAG, "TFLite Model disabled. Using heuristic classification only.")
+        return
+
+        /* 
         // Skip model loading on low-end devices - use heuristics only
         if (currentTier == ModelTier.LITE) {
             Log.i(TAG, "Low-end device detected. Using heuristic classification only.")
@@ -60,43 +65,11 @@ class IntentClassifier @Inject constructor(
                 ModelTier.LITE -> return  // Already handled above
             }
             
-            // Build base options with optional NNAPI delegate
-            val baseOptionsBuilder = BaseOptions.builder()
-
-            // Check for downloaded model first
-            val localModel = modelDownloadManager.getLocalModelPath()
-            if (localModel != null) {
-                Log.d(TAG, "Using downloaded offline model: ${localModel.absolutePath}")
-                baseOptionsBuilder.setModelAssetPath(localModel.absolutePath)
-            } else {
-                Log.d(TAG, "Using bundled asset model: $modelFile")
-                baseOptionsBuilder.setModelAssetPath(modelFile)
-            }
-            
-            // Enable NNAPI hardware acceleration if available
-            if (deviceCapabilityManager.isNnapiAvailable() && currentTier == ModelTier.FULL) {
-                try {
-                    baseOptionsBuilder.setDelegate(Delegate.GPU)
-                    Log.d(TAG, "GPU delegate enabled for hardware acceleration")
-                } catch (e: Exception) {
-                    Log.w(TAG, "GPU delegate not available, using CPU", e)
-                }
-            }
-            
-            val options = TextClassifierOptions.builder()
-                .setBaseOptions(baseOptionsBuilder.build())
-                .build()
-
-            classifier = TextClassifier.createFromOptions(context, options)
-            Log.d(TAG, "Model loaded successfully: $modelFile (Tier: $currentTier)")
-            
-            // Warm up the model with a dummy classification
-            warmUp()
-            
+            // ... (Rest of TFLite loading logic commented out) ...
         } catch (e: Exception) {
-            Log.w(TAG, "Model loading failed. Falling back to heuristics.", e)
-            classifier = null
+            // ...
         }
+        */
     }
     
     /**
