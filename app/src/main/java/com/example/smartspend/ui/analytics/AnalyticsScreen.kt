@@ -83,6 +83,7 @@ fun AnalyticsScreen(
     aiAnalysis: String?,
     isAnalyzing: Boolean,
     chatService: ChatService,
+    currencyFormatter: java.text.NumberFormat,
     onNavigateBack: () -> Unit,
     onAnalyzeClick: () -> Unit,
     downloadStatus: com.example.smartspend.data.ai.ModelDownloadManager.DownloadStatus,
@@ -198,7 +199,7 @@ fun AnalyticsScreen(
                 color = TextSecondary
             )
 
-            MonthlySpendingBarChart(expenses = expenses)
+            MonthlySpendingBarChart(expenses = expenses, currencyFormatter = currencyFormatter)
 
             // 3. AI Analysis Section
             Text(
@@ -224,7 +225,8 @@ fun AnalyticsScreen(
                 AnalyticsChatBottomSheetContent(
                     expenses = expenses,
                     monthlyBudget = monthlyBudget,
-                    chatService = chatService
+                    chatService = chatService,
+                    currencyFormatter = currencyFormatter
                 )
             }
         }
@@ -398,8 +400,7 @@ private fun createPolygonPath(sides: Int, radius: Float, center: Offset, stepAng
  * Bar Chart showing spending for the last 6 months with average line
  */
 @Composable
-fun MonthlySpendingBarChart(expenses: List<Expense>) {
-    val currencyFormatter = remember { java.text.NumberFormat.getCurrencyInstance() }
+fun MonthlySpendingBarChart(expenses: List<Expense>, currencyFormatter: java.text.NumberFormat) {
     
     // Calculate monthly totals for the last 6 months
     val monthlyData = remember(expenses) {
@@ -656,10 +657,10 @@ fun AiAnalysisCard(
 fun AnalyticsChatBottomSheetContent(
     expenses: List<Expense>,
     monthlyBudget: Double,
-    chatService: ChatService
+    chatService: ChatService,
+    currencyFormatter: java.text.NumberFormat
 ) {
-    val totalFormat =
-        java.text.NumberFormat.getCurrencyInstance().format(expenses.sumOf { it.amount })
+    val totalFormat = currencyFormatter.format(expenses.sumOf { it.amount })
     var messages by remember {
         mutableStateOf(
             listOf(

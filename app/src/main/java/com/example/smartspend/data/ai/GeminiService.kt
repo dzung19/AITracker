@@ -424,12 +424,9 @@ IMPORTANT: Return ONLY the raw JSON. No markdown formatting, no code blocks, no 
     /**
      * Analyzes a list of expenses and provides a financial summary.
      */
-    suspend fun analyzeSpending(expenses: List<Expense>, period: String, budget: Double? = null): String? {
+    suspend fun analyzeSpending(expenses: List<Expense>, period: String, budget: Double? = null, currencyFormat: java.text.NumberFormat = java.text.NumberFormat.getCurrencyInstance()): String? {
         if (expenses.isEmpty()) return "No expenses recorded for $period. Add some expenses to get insights! 📊"
 
-        // Use dynamic locale for currency formatting
-        val currencyFormat = java.text.NumberFormat.getCurrencyInstance(java.util.Locale.getDefault())
-        
         val total = expenses.sumOf { it.amount }
         val formattedTotal = currencyFormat.format(total)
         val budgetInfo = if (budget != null && budget > 0) "Budget: ${currencyFormat.format(budget)}" else "Budget: Not set"

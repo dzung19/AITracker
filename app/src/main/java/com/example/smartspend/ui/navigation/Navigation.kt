@@ -141,7 +141,8 @@ fun SmartSpendNavHost(
                 onTierManagementClick = { navController.navigate(Screen.TierManagement.route) },
                 onDebugSimulate = { isSuccess -> viewModel.debugSimulateStreak(isSuccess) },
                 onDebugReset = { viewModel.debugResetStreak() },
-                isMonthUnderBudget = { year, month -> viewModel.isMonthUnderBudget(year, month) }
+                isMonthUnderBudget = { year, month -> viewModel.isMonthUnderBudget(year, month) },
+                currencyFormatter = viewModel.currencyFormatter
             )
         }
         
@@ -163,6 +164,7 @@ fun SmartSpendNavHost(
                 aiAnalysis = aiAnalysis,
                 isAnalyzing = isAnalyzing,
                 chatService = viewModel.chatService,
+                currencyFormatter = viewModel.currencyFormatter,
                 onNavigateBack = { navController.safePopBackStack() },
                 onAnalyzeClick = { viewModel.loadAiAnalysis(forceRefresh = true) },
                 downloadStatus = viewModel.modelDownloadStatus.collectAsState().value,
@@ -186,6 +188,7 @@ fun SmartSpendNavHost(
             
             ExpenseDetailScreen(
                 expense = selectedExpense,
+                currencyFormatter = viewModel.currencyFormatter,
                 onNavigateBack = {
                     viewModel.clearSelectedExpense()
                     navController.safePopBackStack()

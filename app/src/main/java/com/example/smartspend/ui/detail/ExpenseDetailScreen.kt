@@ -37,6 +37,7 @@ private val AccentGreen = Color(0xFF00D9A5)
 @Composable
 fun ExpenseDetailScreen(
     expense: Expense?,
+    currencyFormatter: NumberFormat,
     onNavigateBack: () -> Unit
 ) {
     Scaffold(
@@ -69,14 +70,13 @@ fun ExpenseDetailScreen(
                 CircularProgressIndicator(color = AccentGreen)
             }
         } else {
-            ExpenseContent(expense = expense, modifier = Modifier.padding(padding))
+            ExpenseContent(expense = expense, currencyFormatter = currencyFormatter, modifier = Modifier.padding(padding))
         }
     }
 }
 
 @Composable
-private fun ExpenseContent(expense: Expense, modifier: Modifier = Modifier) {
-    val currencyFormatter = remember { NumberFormat.getCurrencyInstance(Locale.getDefault()) }
+private fun ExpenseContent(expense: Expense, currencyFormatter: NumberFormat, modifier: Modifier = Modifier) {
     val dateFormatter = remember { DateTimeFormatter.ofPattern("MMMM dd, yyyy • h:mm a") }
     val formattedDate = try {
         LocalDateTime.parse(expense.date).format(dateFormatter)

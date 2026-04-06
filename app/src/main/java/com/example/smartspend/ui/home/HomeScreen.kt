@@ -75,9 +75,9 @@ fun HomeScreen(
     onDebugSimulate: (Boolean) -> Unit,
     onDebugReset: () -> Unit,
     isMonthUnderBudget: (Int, Int) -> Boolean?,
+    currencyFormatter: NumberFormat,
     modifier: Modifier = Modifier
 ) {
-    val currencyFormatter = remember { NumberFormat.getCurrencyInstance(Locale.getDefault()) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     

@@ -123,7 +123,8 @@ class GeminiServiceManager @Inject constructor(
         }
 
         // Fetch fresh from AI
-        val result = _geminiService?.analyzeSpending(expenses, period, budget)
+        val currencyFormat = com.example.smartspend.util.CurrencyFormatter.getFormatter(prefs)
+        val result = _geminiService?.analyzeSpending(expenses, period, budget, currencyFormat)
         
         // Update cache if successful
         if (result != null) {

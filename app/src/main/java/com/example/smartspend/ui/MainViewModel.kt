@@ -51,6 +51,10 @@ class MainViewModel @Inject constructor(
     private val prefs: SharedPreferences
 ) : ViewModel() {
 
+    // Currency formatter that persists across locale changes
+    val currencyFormatter: java.text.NumberFormat
+        get() = com.example.smartspend.util.CurrencyFormatter.getFormatter(prefs)
+
     // Model Download State
     val modelDownloadStatus = modelDownloadManager.downloadStatus
     

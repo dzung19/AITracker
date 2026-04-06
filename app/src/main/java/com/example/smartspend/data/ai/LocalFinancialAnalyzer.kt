@@ -11,12 +11,14 @@ import javax.inject.Singleton
  * Used when the offline model is available but internet is not.
  */
 @Singleton
-class LocalFinancialAnalyzer @Inject constructor() {
+class LocalFinancialAnalyzer @Inject constructor(
+    private val prefs: android.content.SharedPreferences
+) {
 
     fun analyze(expenses: List<Expense>, budget: Double?, periodName: String): String {
         if (expenses.isEmpty()) return "No expenses recorded for $periodName."
 
-        val currencyFormat = NumberFormat.getCurrencyInstance(Locale.getDefault())
+        val currencyFormat = com.example.smartspend.util.CurrencyFormatter.getFormatter(prefs)
         val total = expenses.sumOf { it.amount }
         val formattedTotal = currencyFormat.format(total)
 

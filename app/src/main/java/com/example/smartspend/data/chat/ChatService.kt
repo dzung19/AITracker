@@ -18,10 +18,11 @@ data class ChatMessage(
 @Singleton
 class ChatService @Inject constructor(
     private val intentClassifier: IntentClassifier,
-    private val geminiServiceManager: GeminiServiceManager
+    private val geminiServiceManager: GeminiServiceManager,
+    private val prefs: android.content.SharedPreferences
 ) {
 
-    private val currencyFormat = NumberFormat.getCurrencyInstance(Locale.getDefault())
+    private val currencyFormat get() = com.example.smartspend.util.CurrencyFormatter.getFormatter(prefs)
 
     suspend fun generateResponse(message: String, expense: Expense): ChatMessage {
         // 1. Try Gemini Cloud (Native Tier)
