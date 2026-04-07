@@ -23,7 +23,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.smartspend"
-        minSdk = 26
+        minSdk = 28
         targetSdk = 36
         versionCode = 2
         versionName = "1.0"
@@ -54,11 +54,6 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    kotlin {
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
-        }
-    }
     buildFeatures {
         compose = true
         buildConfig = true  // Enable BuildConfig generation
@@ -67,6 +62,12 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
     }
 }
 

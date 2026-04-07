@@ -55,15 +55,17 @@ private val TextSecondary = Color(0xFFB0B0C0)
 fun AddExpenseScreen(
     modifier: Modifier = Modifier,
     onNavigateBack: () -> Unit,
-    onSaveExpense: (title: String, amount: Double, category: String, notes: String?) -> Unit,
+    onSaveExpense: (title: String, amount: Double, category: String, notes: String?, currencyCode: String) -> Unit,
     onScanReceipt: (AiTier) -> Unit,
     isScanning: Boolean = false,
     scannedTitle: String? = null,
     scannedAmount: Double? = null,
     scannedCategory: String? = null,
     scannedNote: String? = null,
+    scannedCurrency: String? = null,
+    homeCurrency: String = "VND",
     currentAiTier: AiTier = AiTier.BASIC,
-    unlockedTiers: Set<AiTier> = setOf(AiTier.BASIC), // Tiers user has purchased
+    unlockedTiers: Set<AiTier> = setOf(AiTier.BASIC),
     onTierSelected: (AiTier) -> Unit = {},
     onScanGallery: (Uri) -> Unit = {}
 ) {
@@ -78,6 +80,7 @@ fun AddExpenseScreen(
     var title by remember(scannedTitle) { mutableStateOf(scannedTitle ?: "") }
     var amount by remember(scannedAmount) { mutableStateOf(scannedAmount?.toString() ?: "") }
     var selectedCategory by remember { mutableStateOf(Category.FOOD) }
+    var selectedCurrency by remember(scannedCurrency) { mutableStateOf(scannedCurrency ?: homeCurrency) }
     
     // Update category when AI scan returns a valid category
     LaunchedEffect(scannedCategory) {
@@ -307,13 +310,43 @@ fun AddExpenseScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Currency selector
+            val commonCurrencies = listOf("VND", "USD", "EUR", "GBP", "JPY", "KRW", "THB", "CNY")
+            Text(
+                text = "Currency",
+                style = MaterialTheme.typography.labelMedium,
+                color = TextSecondary,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                commonCurrencies.take(4).forEach { code ->
+                    FilterChip(
+                        selected = selectedCurrency == code,
+                        onClick = { selectedCurrency = code },
+                        label = { Text(code, fontSize = 12.sp) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = AccentGreen,
+                            selectedLabelColor = Color.Black,
+                            containerColor = CardBackground,
+                            labelColor = TextSecondary
+                        ),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             // Save Button
             Button(
                 onClick = {
                     val parsedAmount = amount.toDoubleOrNull() ?: 0.0
                     if (title.isNotBlank() && parsedAmount > 0) {
                     if (title.isNotBlank()) {
-                        onSaveExpense(title, parsedAmount, selectedCategory.displayName, notes.ifBlank { null })
+                        onSaveExpense(title, parsedAmount, selectedCategory.displayName, notes.ifBlank { null }, selectedCurrency)
                     }
                     }
                 },

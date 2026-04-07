@@ -76,6 +76,7 @@ fun SmartSpendNavHost(
     val scannedAmount by viewModel.scannedAmount.collectAsState()
     val scannedCategory by viewModel.scannedCategory.collectAsState()
     val scannedNote by viewModel.scannedNote.collectAsState()
+    val scannedCurrency by viewModel.scannedCurrency.collectAsState()
     val scanError by viewModel.scanError.collectAsState()
     
     // Selected Expense state
@@ -142,7 +143,8 @@ fun SmartSpendNavHost(
                 onDebugSimulate = { isSuccess -> viewModel.debugSimulateStreak(isSuccess) },
                 onDebugReset = { viewModel.debugResetStreak() },
                 isMonthUnderBudget = { year, month -> viewModel.isMonthUnderBudget(year, month) },
-                currencyFormatter = viewModel.currencyFormatter
+                currencyFormatter = viewModel.currencyFormatter,
+                formatExpenseAmount = { amount, code -> viewModel.formatExpenseAmount(amount, code) }
             )
         }
         
@@ -203,8 +205,8 @@ fun SmartSpendNavHost(
                     viewModel.clearScannedData()
                     navController.safePopBackStack()
                 },
-                onSaveExpense = { title, amount, category, notes ->
-                    viewModel.addExpense(title, amount, category, notes)
+                onSaveExpense = { title, amount, category, notes, currencyCode ->
+                    viewModel.addExpense(title, amount, category, notes, currencyCode)
                     navController.popBackStack(Screen.Home.route, inclusive = false)
                 },
                 onScanReceipt = { tier ->
@@ -235,7 +237,9 @@ fun SmartSpendNavHost(
                 },
                 onScanGallery = { uri ->
                     viewModel.processReceiptUri(uri, context)
-                }
+                },
+                scannedCurrency = scannedCurrency,
+                homeCurrency = viewModel.homeCurrency
             )
         }
         

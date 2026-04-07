@@ -79,6 +79,33 @@ object CurrencyFormatter {
     }
 
     /**
+     * Format a number using a specific currency code.
+     * Useful for displaying per-expense amounts in their original currency.
+     */
+    fun formatWithCode(amount: Double, currencyCode: String): String {
+        val locale = getLocaleForCurrency(currencyCode)
+        val formatter = NumberFormat.getCurrencyInstance(locale)
+        formatter.currency = Currency.getInstance(currencyCode)
+        if (currencyCode == "VND") {
+            formatter.maximumFractionDigits = 0
+        }
+        return formatter.format(amount)
+    }
+
+    /**
+     * Convenience alias for getCurrencyCode — the user's home currency.
+     */
+    fun getHomeCurrency(prefs: SharedPreferences): String = getCurrencyCode(prefs)
+
+    /**
+     * Resolve a currency code: if empty or blank, return the home currency.
+     * Used because Expense.currencyCode defaults to "" for backward compatibility.
+     */
+    fun resolveCode(prefs: SharedPreferences, code: String): String {
+        return if (code.isBlank()) getHomeCurrency(prefs) else code
+    }
+
+    /**
      * Map a currency code to a locale that formats it naturally.
      * e.g., VND → vi_VN (postfix đ), USD → en_US (prefix $)
      */

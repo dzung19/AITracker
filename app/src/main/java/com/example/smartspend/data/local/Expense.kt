@@ -13,5 +13,6 @@ data class Expense(
     val amount: Double,
     val category: String,
     val date: String = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
-    val notes: String? = null
+    val notes: String? = null,
+    val currencyCode: String = ""  // "" = home currency
 )

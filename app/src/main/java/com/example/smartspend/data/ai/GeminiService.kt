@@ -158,7 +158,7 @@ object GeminiModels {
     // Latest generation, most intelligent models (Preview - limited RPD)
     
     /** Most intelligent model - Input: 1M, Output: 64K, RPD: 10 */
-    const val GEMINI_3_PRO_PREVIEW = "gemini-3-pro-preview"
+    const val GEMINI_3_PRO_PREVIEW = "gemini-3.1-pro-preview"
     val GEMINI_3_PRO_PREVIEW_SPEC = ModelSpec(
         GEMINI_3_PRO_PREVIEW, TOKEN_LIMIT_1M, OUTPUT_LIMIT_64K,
         requestsPerDay = 10, requestsPerMinute = 2,
@@ -373,8 +373,14 @@ INSTRUCTIONS:
    - Keep it short (under 50 chars).
    - If no specific items found, use "Purchase at Store Name".
 
+5. Detect CURRENCY:
+   - Look for currency symbols: đ, VND → "VND"; $, USD → "USD"; €, EUR → "EUR"; ¥, JPY → "JPY"; ₩, KRW → "KRW"
+   - If amounts use Vietnamese format (e.g., 50.000, 120,000) with no symbol, assume "VND".
+   - If amounts use US format (e.g., 12.99, $5.00), assume "USD".
+   - Return the ISO 4217 currency code.
+
 Return EXACTLY ONE JSON object with the TOTAL purchase:
-{"title":"Store Name","amount":123.45,"category":"Category","note":"Short summary of items"}
+{"title":"Store Name","amount":123.45,"category":"Category","note":"Short summary of items","currency":"VND"}
 
 IMPORTANT: Return ONLY the raw JSON. No markdown formatting, no code blocks, no explanations."""
 
@@ -545,5 +551,6 @@ data class ParsedExpense(
     val title: String,
     val amount: Double,
     val category: String,
-    val note: String? = null
+    val note: String? = null,
+    val currency: String? = null  // e.g., "VND", "USD"
 )

@@ -76,6 +76,7 @@ fun HomeScreen(
     onDebugReset: () -> Unit,
     isMonthUnderBudget: (Int, Int) -> Boolean?,
     currencyFormatter: NumberFormat,
+    formatExpenseAmount: (Double, String) -> String,
     modifier: Modifier = Modifier
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -323,7 +324,7 @@ fun HomeScreen(
                     items(expenses, key = { it.id }) { expense ->
                         ExpenseCard(
                             expense = expense,
-                            currencyFormatter = currencyFormatter,
+                            formatExpenseAmount = formatExpenseAmount,
                             onDelete = { onDeleteClick(expense) },
                             onClick = { onExpenseClick(expense.id) }
                         )
@@ -818,7 +819,7 @@ private fun DateNavigator(
 @Composable
 private fun ExpenseCard(
     expense: Expense,
-    currencyFormatter: NumberFormat,
+    formatExpenseAmount: (Double, String) -> String,
     onDelete: () -> Unit,
     onClick: () -> Unit
 ) {
@@ -864,7 +865,7 @@ private fun ExpenseCard(
             
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = currencyFormatter.format(expense.amount),
+                    text = formatExpenseAmount(expense.amount, expense.currencyCode),
                     style = MaterialTheme.typography.titleMedium,
                     color = AccentGreen,
                     fontWeight = FontWeight.Bold

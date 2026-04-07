@@ -48,12 +48,29 @@ class MainViewModel @Inject constructor(
     private val modelDownloadManager: com.example.smartspend.data.ai.ModelDownloadManager,
     private val localFinancialAnalyzer: com.example.smartspend.data.ai.LocalFinancialAnalyzer,
     val chatService: com.example.smartspend.data.chat.ChatService,
-    private val prefs: SharedPreferences
+    private val prefs: SharedPreferences,
+    val exchangeRateService: com.example.smartspend.data.ai.ExchangeRateService
 ) : ViewModel() {
 
     // Currency formatter that persists across locale changes
     val currencyFormatter: java.text.NumberFormat
         get() = com.example.smartspend.util.CurrencyFormatter.getFormatter(prefs)
+
+    // Home currency code (e.g., "VND")
+    val homeCurrency: String
+        get() = com.example.smartspend.util.CurrencyFormatter.getHomeCurrency(prefs)
+
+    /** Convert an expense amount to home currency */
+    fun convertToHomeCurrency(amount: Double, currencyCode: String): Double {
+        val resolved = com.example.smartspend.util.CurrencyFormatter.resolveCode(prefs, currencyCode)
+        return exchangeRateService.convert(amount, resolved, homeCurrency)
+    }
+
+    /** Format an expense amount in its own currency */
+    fun formatExpenseAmount(amount: Double, currencyCode: String): String {
+        val resolved = com.example.smartspend.util.CurrencyFormatter.resolveCode(prefs, currencyCode)
+        return com.example.smartspend.util.CurrencyFormatter.formatWithCode(amount, resolved)
+    }
 
     // Model Download State
     val modelDownloadStatus = modelDownloadManager.downloadStatus
@@ -115,6 +132,12 @@ class MainViewModel @Inject constructor(
         loadStreakData()
         checkAndUpdateStreak()
         
+        // Refresh exchange rates (daily, cached for offline)
+        viewModelScope.launch {
+            try { exchangeRateService.refreshRates() }
+            catch (e: Exception) { Log.w("MainViewModel", "Exchange rate refresh failed", e) }
+        }
+        
         // React to date range changes (and initial load)
         viewModelScope.launch {
             dateRange.collect { (startRange, endRange) ->
@@ -173,6 +196,9 @@ class MainViewModel @Inject constructor(
 
     private val _scannedNote = MutableStateFlow<String?>(null)
     val scannedNote: StateFlow<String?> = _scannedNote.asStateFlow()
+
+    private val _scannedCurrency = MutableStateFlow<String?>(null)
+    val scannedCurrency: StateFlow<String?> = _scannedCurrency.asStateFlow()
     
     private val _scanError = MutableStateFlow<String?>(null)
     val scanError: StateFlow<String?> = _scanError.asStateFlow()
@@ -507,13 +533,14 @@ class MainViewModel @Inject constructor(
     
     // ==================== EXPENSE MANAGEMENT ====================
     
-    fun addExpense(title: String, amount: Double, category: String, notes: String?) {
+    fun addExpense(title: String, amount: Double, category: String, notes: String?, currencyCode: String? = null) {
         viewModelScope.launch {
             val expense = Expense(
                 title = title,
                 amount = amount,
                 category = category,
-                notes = notes
+                notes = notes,
+                currencyCode = currencyCode ?: homeCurrency
             )
             repository.insert(expense)
             clearScannedData()
@@ -573,6 +600,7 @@ class MainViewModel @Inject constructor(
                         _scannedAmount.value = parsed.amount
                         _scannedCategory.value = parsed.category
                         _scannedNote.value = parsed.note
+                        _scannedCurrency.value = parsed.currency
                         Log.d("MainViewModel", "Parsed with ${currentTier.displayName}: $parsed")
                     } else {
                         _scanError.value = "Could not parse receipt. Please enter manually."
@@ -630,6 +658,7 @@ class MainViewModel @Inject constructor(
                         _scannedAmount.value = parsed.amount
                         _scannedCategory.value = parsed.category
                         _scannedNote.value = parsed.note
+                        _scannedCurrency.value = parsed.currency
                     } else {
                         _scanError.value = "Could not parse receipt."
                     }
@@ -651,6 +680,7 @@ class MainViewModel @Inject constructor(
         _scannedAmount.value = null
         _scannedCategory.value = null
         _scannedNote.value = null
+        _scannedCurrency.value = null
         _scanError.value = null
     }
     
