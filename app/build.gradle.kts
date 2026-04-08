@@ -82,6 +82,12 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material.icons.core)
 
+    // Google Play Billing
+    implementation(libs.billing.ktx)
+
+    // Ads / Billing
+    implementation(project(":ads"))
+
     // Navigation
     implementation(libs.androidx.navigation.compose)
 

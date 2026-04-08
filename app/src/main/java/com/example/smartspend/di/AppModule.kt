@@ -7,6 +7,8 @@ import com.example.smartspend.data.local.AppDatabase
 import com.example.smartspend.data.local.ExpenseDao
 import com.example.smartspend.data.repository.ExpenseRepository
 import com.example.smartspend.data.scanner.ReceiptScannerService
+import com.daumo.ads.BillingManager
+import com.example.smartspend.data.ai.AiTier
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -56,6 +58,19 @@ object AppModule {
     @Singleton
     fun provideReceiptScannerService(): ReceiptScannerService {
         return ReceiptScannerService()
+    }
+    
+    @Provides
+    @Singleton
+    fun provideBillingManager(@ApplicationContext context: Context): BillingManager {
+        val aiTierSkus = AiTier.entries.mapNotNull { it.skuId }
+        return BillingManager(
+            context = context,
+            productIds = aiTierSkus,
+            onUserPurchasedRemoveAds = {
+                // Future use
+            }
+        )
     }
     
     @Provides

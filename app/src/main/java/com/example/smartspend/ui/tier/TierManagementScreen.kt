@@ -43,6 +43,7 @@ fun TierManagementScreen(
     currentTier: AiTier,
     unlockedTiers: Set<AiTier>,
     onTierSelected: (AiTier) -> Unit,
+    onPurchaseClick: (AiTier) -> Unit,
     onNavigateBack: () -> Unit
 ) {
     Scaffold(
@@ -86,7 +87,8 @@ fun TierManagementScreen(
                     tier = tier,
                     isSelected = tier == currentTier,
                     isUnlocked = tier in unlockedTiers,
-                    onSelect = { onTierSelected(tier) }
+                    onSelect = { onTierSelected(tier) },
+                    onPurchaseClick = { onPurchaseClick(tier) }
                 )
             }
             
@@ -104,7 +106,8 @@ fun DetailedAiTierCard(
     tier: AiTier,
     isSelected: Boolean,
     isUnlocked: Boolean,
-    onSelect: () -> Unit
+    onSelect: () -> Unit,
+    onPurchaseClick: () -> Unit
 ) {
     val tierColor = when (tier) {
         AiTier.BASIC -> AccentGreen
@@ -121,7 +124,9 @@ fun DetailedAiTierCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = isUnlocked) { onSelect() },
+            .clickable { 
+                if (isUnlocked) onSelect() else onPurchaseClick()
+            },
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = CardBackground),
         border = BorderStroke(2.dp, animatedBorderColor)

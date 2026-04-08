@@ -15,6 +15,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.smartspend.data.ai.AiTier
+import android.app.Activity
 import com.example.smartspend.ui.MainViewModel
 import com.example.smartspend.ui.add.AddExpenseScreen
 import com.example.smartspend.ui.camera.CameraScreen
@@ -140,8 +141,6 @@ fun SmartSpendNavHost(
                 },
                 onTotalClick = { navController.navigate(Screen.Analytics.route) },
                 onTierManagementClick = { navController.navigate(Screen.TierManagement.route) },
-                onDebugSimulate = { isSuccess -> viewModel.debugSimulateStreak(isSuccess) },
-                onDebugReset = { viewModel.debugResetStreak() },
                 isMonthUnderBudget = { year, month -> viewModel.isMonthUnderBudget(year, month) },
                 currencyFormatter = viewModel.currencyFormatter,
                 formatExpenseAmount = { amount, code -> viewModel.formatExpenseAmount(amount, code) }
@@ -150,10 +149,14 @@ fun SmartSpendNavHost(
         
         // Tier Management Screen
         composable(Screen.TierManagement.route) {
+            val activity = LocalContext.current as? Activity
             TierManagementScreen(
                 currentTier = currentAiTier,
                 unlockedTiers = unlockedTiers,
                 onTierSelected = { viewModel.selectAiTier(it) },
+                onPurchaseClick = { tier -> 
+                    activity?.let { act -> viewModel.launchPurchaseFlow(act, tier) }
+                },
                 onNavigateBack = { navController.safePopBackStack() }
             )
         }

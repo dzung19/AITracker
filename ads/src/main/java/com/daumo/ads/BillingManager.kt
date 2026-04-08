@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
 private var PRODUCT_ID_REMOVE_ADS = "remove_ads_sku" // Will be updated with BuildConfig value
 class BillingManager(
     private val context: Context,
+    private val productIds: List<String> = emptyList(),
     private val onUserPurchasedRemoveAds: () -> Unit, // Callback khi mua thành công
     private val onBillingSetupFailed: (() -> Unit)? = null,
     private val onPurchaseFailed: ((billingResult: BillingResult) -> Unit)? = null
@@ -28,15 +29,16 @@ class BillingManager(
     private val _isUserPremium = MutableStateFlow(false)
     val isUserPremium = _isUserPremium.asStateFlow()
 
-    private var removeAdsProductDetails: ProductDetails? = null
+    private val _purchasedProducts = MutableStateFlow<Set<String>>(emptySet())
+    val purchasedProducts = _purchasedProducts.asStateFlow()
+
+    private val productDetailsMap = mutableMapOf<String, ProductDetails>()
     
     private val purchasesUpdatedListener =
         PurchasesUpdatedListener { billingResult, purchases ->
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK && purchases != null) {
                 for (purchase in purchases) {
-                    if (purchase.products.contains(PRODUCT_ID_REMOVE_ADS)) {
-                        handlePurchase(purchase)
-                    }
+                    handlePurchase(purchase)
                 }
             } else if (billingResult.responseCode == BillingClient.BillingResponseCode.USER_CANCELED) {
                 i(TAG, "User cancelled the purchase flow.")
@@ -89,24 +91,24 @@ class BillingManager(
             return
         }
 
-        val productList = listOf(
+        val allProductIds = (productIds + PRODUCT_ID_REMOVE_ADS).distinct()
+        val productList = allProductIds.map {
             QueryProductDetailsParams.Product.newBuilder()
-                .setProductId(PRODUCT_ID_REMOVE_ADS)
+                .setProductId(it)
                 .setProductType(BillingClient.ProductType.INAPP)
                 .build()
-        )
+        }
+
         val params = QueryProductDetailsParams.newBuilder()
             .setProductList(productList)
             .build()
 
         billingClient.queryProductDetailsAsync(params) { billingResult, productDetailsList ->
-            if (billingResult.responseCode == BillingClient.BillingResponseCode.OK && productDetailsList.isNotEmpty()) {
-                removeAdsProductDetails = productDetailsList.find { it.productId == PRODUCT_ID_REMOVE_ADS }
-                if (removeAdsProductDetails == null) {
-                    e(TAG, "Product $PRODUCT_ID_REMOVE_ADS not found in Play Console or not configured correctly.")
-                } else {
-                    i(TAG, "Product details for $PRODUCT_ID_REMOVE_ADS fetched successfully.")
+            if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                productDetailsList.forEach { details ->
+                    productDetailsMap[details.productId] = details
                 }
+                i(TAG, "Product details fetched successfully: ${productDetailsMap.keys}")
             } else {
                 e(TAG, "Error querying product details. Response Code: ${billingResult.responseCode}, Debug Message: ${billingResult.debugMessage}")
             }
@@ -123,70 +125,46 @@ class BillingManager(
             .build()
 
         billingClient.queryPurchasesAsync(params) { billingResult, purchasesList ->
+            val purchasedSet = mutableSetOf<String>()
             var isPremium = false
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
                 purchasesList.forEach { purchase ->
-                    if (purchase.products.contains(PRODUCT_ID_REMOVE_ADS) &&
-                        purchase.purchaseState == Purchase.PurchaseState.PURCHASED
-                    ) {
-                        isPremium = true
+                    if (purchase.purchaseState == Purchase.PurchaseState.PURCHASED) {
+                        purchasedSet.addAll(purchase.products)
                         if (!purchase.isAcknowledged) {
-                            acknowledgePurchase(purchase.purchaseToken, isRestoring = true)
+                            acknowledgePurchase(purchase.purchaseToken, purchase.products)
                         }
                     }
                 }
             } else {
                 e(TAG, "Error querying existing purchases: ${billingResult.debugMessage}, Response Code: ${billingResult.responseCode}")
             }
-            if (isPremium && !_isUserPremium.value) {
-            } else if (!isPremium) {
-                _isUserPremium.value = false
+            if (purchasedSet.contains(PRODUCT_ID_REMOVE_ADS)) {
+                isPremium = true
             }
-            i(TAG, "Existing purchases checked. User is premium: ${_isUserPremium.value}")
+            if (isPremium && !_isUserPremium.value) {
+                onUserPurchasedRemoveAds()
+            }
+            _isUserPremium.value = isPremium
+            _purchasedProducts.value = purchasedSet
+            i(TAG, "Existing purchases checked. User is premium: ${_isUserPremium.value}, Products: $purchasedSet")
         }
     }
 
     fun queryPurchasesAsync() {
-        if (!billingClient.isReady) {
-            e(TAG, "queryPurchasesAsync: BillingClient is not ready.")
-            return
-        }
-
-        billingClient.queryPurchasesAsync(
-            QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.INAPP).build()
-        ) { billingResult, purchasesList ->
-            if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-                var foundRemoveAdsPurchase = false
-                for (purchase in purchasesList) {
-                    if (purchase.products.contains(PRODUCT_ID_REMOVE_ADS) &&
-                        purchase.purchaseState == Purchase.PurchaseState.PURCHASED) {
-                        foundRemoveAdsPurchase = true
-                        if (!purchase.isAcknowledged) {
-                            acknowledgePurchase(purchase.purchaseToken)
-                        }
-                    }
-                }
-                _isUserPremium.value = foundRemoveAdsPurchase
-                if (foundRemoveAdsPurchase) {
-                    i(TAG, "User has already purchased remove_ads.")
-                } else {
-                    i(TAG, "User has NOT purchased remove_ads.")
-                }
-            } else {
-                e(TAG, "Error querying purchases: ${billingResult.debugMessage}")
-            }
-        }
+        queryExistingPurchases()
     }
 
-    fun launchPurchaseFlow(activity: Activity) {
+    fun launchPurchaseFlow(activity: Activity, productId: String = PRODUCT_ID_REMOVE_ADS) {
         if (!billingClient.isReady) {
             e(TAG, "launchPurchaseFlow: BillingClient is not ready.")
             onPurchaseFailed?.invoke(BillingResult.newBuilder().setResponseCode(BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE).build())
             return
         }
 
-        if (removeAdsProductDetails == null) {
-            e(TAG, "launchPurchaseFlow: Product details for $PRODUCT_ID_REMOVE_ADS not available. Querying again...")
+        val productDetails = productDetailsMap[productId]
+        if (productDetails == null) {
+            e(TAG, "launchPurchaseFlow: Product details for $productId not available. Querying again...")
             queryProductDetails()
             onPurchaseFailed?.invoke(BillingResult.newBuilder().setResponseCode(BillingClient.BillingResponseCode.ITEM_UNAVAILABLE).build())
             return
@@ -194,7 +172,7 @@ class BillingManager(
 
         val productDetailsParamsList = listOf(
             BillingFlowParams.ProductDetailsParams.newBuilder()
-                .setProductDetails(removeAdsProductDetails!!)
+                .setProductDetails(productDetails)
                 .build()
         )
         val billingFlowParams = BillingFlowParams.newBuilder()
@@ -209,20 +187,17 @@ class BillingManager(
             }
             onPurchaseFailed?.invoke(launchResult)
         } else {
-            i(TAG, "Billing flow launched successfully for $PRODUCT_ID_REMOVE_ADS.")
+            i(TAG, "Billing flow launched successfully for $productId.")
         }
     }
 
     private fun handlePurchase(purchase: Purchase) {
         if (purchase.purchaseState == Purchase.PurchaseState.PURCHASED) {
             if (!purchase.isAcknowledged) {
-                acknowledgePurchase(purchase.purchaseToken)
+                acknowledgePurchase(purchase.purchaseToken, purchase.products)
             } else {
-                if (!_isUserPremium.value) {
-                    _isUserPremium.value = true
-                    onUserPurchasedRemoveAds()
-                }
-                i(TAG, "Purchase for $PRODUCT_ID_REMOVE_ADS already acknowledged.")
+                updatePurchasedState(purchase.products)
+                i(TAG, "Purchase for ${purchase.products} already acknowledged.")
             }
         } else if (purchase.purchaseState == Purchase.PurchaseState.PENDING) {
             i(TAG, "Purchase is PENDING for: ${purchase.products.joinToString()}. Inform user.")
@@ -231,7 +206,7 @@ class BillingManager(
         }
     }
 
-    private fun acknowledgePurchase(purchaseToken: String, isRestoring: Boolean = false) {
+    private fun acknowledgePurchase(purchaseToken: String, products: List<String>) {
         if (!billingClient.isReady) {
             e(TAG, "acknowledgePurchase: BillingClient is not ready.")
             return
@@ -241,29 +216,21 @@ class BillingManager(
             .build()
         billingClient.acknowledgePurchase(acknowledgePurchaseParams) { billingResult ->
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-                if (!_isUserPremium.value) {
-                    _isUserPremium.value = true
-                    onUserPurchasedRemoveAds()
-                }
-                i(TAG, "Purchase acknowledged successfully for $PRODUCT_ID_REMOVE_ADS. Is restoring: $isRestoring")
+                updatePurchasedState(products)
+                i(TAG, "Purchase acknowledged successfully for $products.")
             } else {
                 e(TAG, "Failed to acknowledge purchase. Error: ${billingResult.debugMessage}, Response Code: ${billingResult.responseCode}")
             }
         }
     }
 
-    private fun acknowledgePurchase(purchaseToken: String) {
-        val acknowledgePurchaseParams = AcknowledgePurchaseParams.newBuilder()
-            .setPurchaseToken(purchaseToken)
-            .build()
-        billingClient.acknowledgePurchase(acknowledgePurchaseParams) { billingResult ->
-            if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-                _isUserPremium.value = true
-                onUserPurchasedRemoveAds()
-                i(TAG, "Purchase acknowledged successfully for $PRODUCT_ID_REMOVE_ADS.")
-            } else {
-                e(TAG, "Failed to acknowledge purchase. Error: ${billingResult.debugMessage}")
-            }
+    private fun updatePurchasedState(products: List<String>) {
+        val newSet = _purchasedProducts.value + products
+        _purchasedProducts.value = newSet
+        
+        if (products.contains(PRODUCT_ID_REMOVE_ADS) && !_isUserPremium.value) {
+            _isUserPremium.value = true
+            onUserPurchasedRemoveAds()
         }
     }
 

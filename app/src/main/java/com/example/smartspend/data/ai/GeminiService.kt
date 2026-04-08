@@ -40,7 +40,8 @@ enum class AiTier(
     val modelName: String,
     val requestsPerDay: Int,
     val requestsPerMinute: Int,
-    val description: String
+    val description: String,
+    val skuId: String? = null
 ) {
     /**
      * BASIC Tier (Free / Default)
@@ -67,7 +68,8 @@ enum class AiTier(
         modelName = GeminiModels.GEMINI_2_5_FLASH,
         requestsPerDay = 250,
         requestsPerMinute = 15,
-        description = "Balanced performance for most receipts"
+        description = "Balanced performance for most receipts",
+        skuId = "ai_tier_standard"
     ),
     
     /**
@@ -81,7 +83,8 @@ enum class AiTier(
         modelName = GeminiModels.GEMINI_2_5_PRO,
         requestsPerDay = 100,
         requestsPerMinute = 10,
-        description = "Superior accuracy for complex receipts"
+        description = "Superior accuracy for complex receipts",
+        skuId = "ai_tier_advanced"
     ),
     
     /**
@@ -95,7 +98,8 @@ enum class AiTier(
         modelName = GeminiModels.GEMINI_3_FLASH_PREVIEW,
         requestsPerDay = 20,
         requestsPerMinute = 5,
-        description = "Cutting-edge AI with latest capabilities"
+        description = "Cutting-edge AI with latest capabilities",
+        skuId = "ai_tier_elite"
     );
     
     companion object {
