@@ -21,3 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "SmartSpend"
 include(":app")
+include(":ads")
