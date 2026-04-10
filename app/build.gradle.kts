@@ -18,11 +18,11 @@ if (localPropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.example.smartspend"
+    namespace = "com.dzungphung.aimodel.econimical.smartspend"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.smartspend"
+        applicationId = "com.dzungphung.aimodel.econimical.smartspend"
         minSdk = 28
         targetSdk = 36
         versionCode = 2
