@@ -25,6 +25,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.daumo.ads.BannerAdManager
 import com.daumo.ads.DynamicAdsManager
+import com.google.android.gms.ads.LoadAdError
 import kotlinx.coroutines.delay
 
 @Composable
@@ -76,7 +77,7 @@ fun BannerAd(modifier: Modifier = Modifier) {
                                     adContainer.visibility = View.VISIBLE
                                 }
 
-                                override fun onAdFailedToLoad(adError: com.google.android.gms.ads.LoadAdError?) {
+                                override fun onAdFailedToLoad(adError: LoadAdError?) {
                                     Log.d("BannerAd", "Banner ad failed to load: ${adError?.message}")
                                     isBannerLoaded = false
                                     adContainer.visibility = View.GONE

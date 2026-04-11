@@ -22,7 +22,7 @@ class ChatService @Inject constructor(
     private val prefs: SharedPreferences
 ) {
 
-    private val currencyFormat get() = com.example.smartspend.util.CurrencyFormatter.getFormatter(prefs)
+    private val currencyFormat get() = CurrencyFormatter.getFormatter(prefs)
 
     suspend fun generateResponse(message: String, expense: Expense): ChatMessage {
         // 1. Try Gemini Cloud (Native Tier)

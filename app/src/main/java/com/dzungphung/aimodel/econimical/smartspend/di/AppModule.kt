@@ -8,7 +8,7 @@ import com.dzungphung.aimodel.econimical.smartspend.data.local.ExpenseDao
 import com.dzungphung.aimodel.econimical.smartspend.data.repository.ExpenseRepository
 import com.dzungphung.aimodel.econimical.smartspend.data.scanner.ReceiptScannerService
 import com.daumo.ads.BillingManager
-import com.example.smartspend.data.ai.AiTier
+import com.dzungphung.aimodel.econimical.smartspend.data.ai.AiTier
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

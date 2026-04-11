@@ -42,6 +42,14 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField("String", "APP_OPEN_AD_ID", "\"ca-app-pub-3940256099942544/9257395921\"")
+            buildConfigField("String", "BANNER_AD_ID", "\"ca-app-pub-3940256099942544/6300978111\"")
+            buildConfigField("String", "INTERSTITIAL_AD_ID", "\"ca-app-pub-3940256099942544/1033173712\"")
+            buildConfigField("String", "REMOVE_ADS_SKU", "\"android.test.purchased\"")
+            buildConfigField("Boolean", "ADS_DISABLED", "true")
+            manifestPlaceholders["caAppPubId"] = "ca-app-pub-3940256099942544~3347511713"
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
@@ -87,6 +95,7 @@ dependencies {
 
     // Ads / Billing
     implementation(project(":ads"))
+    implementation(libs.googleAds)
 
     // Navigation
     implementation(libs.androidx.navigation.compose)

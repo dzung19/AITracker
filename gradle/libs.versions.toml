@@ -25,6 +25,7 @@ googleServices = "4.4.2"
 appcompat = "1.7.1"
 material = "1.13.0"
 billingKtx = "8.3.0"
+googleAds = "24.7.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -78,6 +79,7 @@ material = { group = "com.google.android.material", name = "material", version.r
 
 #ggplay billing
 billing-ktx = { module = "com.android.billingclient:billing-ktx", version.ref = "billingKtx" }
+googleAds = { group = "com.google.android.gms", name = "play-services-ads", version.ref = "googleAds" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
