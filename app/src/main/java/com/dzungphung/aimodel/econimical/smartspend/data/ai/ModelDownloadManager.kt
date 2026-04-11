@@ -2,7 +2,7 @@ package com.dzungphung.aimodel.econimical.smartspend.data.ai
 
 import android.content.Context
 import android.util.Log
-import com.example.smartspend.BuildConfig
+import com.dzungphung.aimodel.econimical.smartspend.BuildConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -89,7 +89,7 @@ class ModelDownloadManager @Inject constructor(
                     throw IOException("Download failed: ${response.code} ${response.message} body: ${response.body?.string()}")
                 }
 
-                val body = response.body ?: throw IOException("Empty response body")
+                val body = response.body
                 val contentLength = body.contentLength()
                 val file = getModelFile()
                 
