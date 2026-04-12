@@ -77,6 +77,10 @@ fun HomeScreen(
     isMonthUnderBudget: (Int, Int) -> Boolean?,
     currencyFormatter: NumberFormat,
     formatExpenseAmount: (Double, String) -> String,
+    showCurrencySelection: Boolean,
+    onDismissCurrencySelection: () -> Unit,
+    onSetHomeCurrency: (String) -> Unit,
+    homeCurrencyCode: String,
     modifier: Modifier = Modifier
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -93,6 +97,22 @@ fun HomeScreen(
         StreakCelebrationDialog(
             streakCount = streakCount,
             onDismiss = onDismissStreak
+        )
+    }
+
+    // Currency selection dialog
+    var forceShowCurrencyDialog by remember { mutableStateOf(false) }
+    if (showCurrencySelection || forceShowCurrencyDialog) {
+        CurrencySelectionDialog(
+            currentCurrency = homeCurrencyCode,
+            onDismiss = {
+                forceShowCurrencyDialog = false
+                onDismissCurrencySelection()
+            },
+            onConfirm = { code ->
+                onSetHomeCurrency(code)
+                forceShowCurrencyDialog = false
+            }
         )
     }
 
@@ -149,6 +169,23 @@ fun HomeScreen(
                         } 
                     },
                     icon = { Icon(Icons.Default.Star, contentDescription = null) }, // Magic/Star icon
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                    colors = NavigationDrawerItemDefaults.colors(
+                        unselectedIconColor = TextSecondary,
+                        unselectedTextColor = TextSecondary
+                    )
+                )
+
+                NavigationDrawerItem(
+                    label = { Text("Change Base Currency") },
+                    selected = false,
+                    onClick = { 
+                        scope.launch { 
+                            drawerState.close() 
+                            forceShowCurrencyDialog = true 
+                        } 
+                    },
+                    icon = { Icon(Icons.Default.Settings, contentDescription = null) },
                     modifier = Modifier.padding(horizontal = 12.dp),
                     colors = NavigationDrawerItemDefaults.colors(
                         unselectedIconColor = TextSecondary,
@@ -1025,6 +1062,68 @@ private fun StreakCelebrationDialog(
         confirmButton = {
             TextButton(onClick = onDismiss) {
                 Text("Awesome!", color = AccentGreen, fontWeight = FontWeight.Bold)
+            }
+        }
+    )
+    )
+}
+
+@Composable
+private fun CurrencySelectionDialog(
+    currentCurrency: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    val commonCurrencies = listOf("VND", "USD", "EUR", "GBP", "JPY", "KRW", "CNY", "THB")
+    var selected by remember { mutableStateOf(currentCurrency.ifBlank { "USD" }) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = CardBackground,
+        titleContentColor = TextPrimary,
+        textContentColor = TextSecondary,
+        title = { Text("Select Base Currency") },
+        text = {
+            Column {
+                Text(
+                    "Choose the currency for displaying your total budget and charts.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 300.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(commonCurrencies) { currency ->
+                        val isSelected = selected == currency
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isSelected) AccentGreen.copy(alpha = 0.2f) else Color.Transparent)
+                                .clickable { selected = currency }
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = currency,
+                                color = if (isSelected) AccentGreen else TextPrimary,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(selected) }) {
+                Text("Confirm", color = AccentGreen, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = TextSecondary)
             }
         }
     )

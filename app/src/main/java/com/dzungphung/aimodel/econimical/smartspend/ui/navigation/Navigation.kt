@@ -70,6 +70,7 @@ fun SmartSpendNavHost(
     val monthlyBudget by viewModel.monthlyBudget.collectAsState()
     val streakCount by viewModel.streakCount.collectAsState()
     val showStreakCelebration by viewModel.showStreakCelebration.collectAsState()
+    val showCurrencySelection by viewModel.showCurrencySelection.collectAsState()
     
     val isScanning by viewModel.isScanning.collectAsState()
     val scannedTitle by viewModel.scannedTitle.collectAsState()
@@ -142,7 +143,11 @@ fun SmartSpendNavHost(
                 onTierManagementClick = { navController.navigate(Screen.TierManagement.route) },
                 isMonthUnderBudget = { year, month -> viewModel.isMonthUnderBudget(year, month) },
                 currencyFormatter = viewModel.currencyFormatter,
-                formatExpenseAmount = { amount, code -> viewModel.formatExpenseAmount(amount, code) }
+                formatExpenseAmount = { amount, code -> viewModel.formatExpenseAmount(amount, code) },
+                showCurrencySelection = showCurrencySelection,
+                onDismissCurrencySelection = { viewModel.dismissCurrencySelection() },
+                onSetHomeCurrency = { code -> viewModel.setHomeCurrency(code) },
+                homeCurrencyCode = viewModel.homeCurrency
             )
         }
         

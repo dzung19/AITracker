@@ -39,7 +39,7 @@ object AppModule {
     @Provides
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
-        return AppDatabase.Companion.getDatabase(context)
+        return AppDatabase.getDatabase(context)
     }
     
     @Provides

@@ -74,6 +74,17 @@ class MainViewModel @Inject constructor(
         val resolved = CurrencyFormatter.resolveCode(prefs, currencyCode)
         return exchangeRateService.convert(amount, resolved, homeCurrency)
     }
+    
+    fun setHomeCurrency(code: String) {
+        CurrencyFormatter.setCurrencyCode(prefs, code)
+        prefs.edit().putBoolean(KEY_HAS_SELECTED_CURRENCY, true).apply()
+        _showCurrencySelection.value = false
+    }
+
+    fun dismissCurrencySelection() {
+        prefs.edit().putBoolean(KEY_HAS_SELECTED_CURRENCY, true).apply()
+        _showCurrencySelection.value = false
+    }
 
     /** Format an expense amount in its own currency */
     fun formatExpenseAmount(amount: Double, currencyCode: String): String {
@@ -125,6 +136,11 @@ class MainViewModel @Inject constructor(
     // 4. Other State
     private val _monthlyBudget = MutableStateFlow<Double?>(null)
     val monthlyBudget: StateFlow<Double?> = _monthlyBudget.asStateFlow()
+    
+    private val KEY_HAS_SELECTED_CURRENCY = "has_selected_currency"
+    
+    private val _showCurrencySelection = MutableStateFlow(!prefs.getBoolean(KEY_HAS_SELECTED_CURRENCY, false))
+    val showCurrencySelection: StateFlow<Boolean> = _showCurrencySelection.asStateFlow()
 
     // Computed Date Range Flow
     private val dateRange = combine(_selectedPeriod, _currentDate) { period, date ->
