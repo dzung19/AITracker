@@ -117,235 +117,270 @@ fun AddExpenseScreen(
             modifier = modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            // AI Tier Selector
-            AiTierSelector(
-                selectedTier = selectedTier,
-                unlockedTiers = unlockedTiers,
-                onTierSelected = { tier ->
-                    selectedTier = tier
-                    onTierSelected(tier)
-                }
-            )
-
-            // Scan Receipt Button - The STAR feature!
-            ScanReceiptButton(
-                onClick = { onScanReceipt(selectedTier) },
-                isScanning = isScanning,
-                selectedTier = selectedTier
-            )
-            
-            // Gallery Button (Small, under Scan)
-            TextButton(
-                onClick = { 
-                    galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                },
+            // Scrollable content area
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(36.dp),
-                enabled = !isScanning,
-                colors = ButtonDefaults.textButtonColors(contentColor = AccentGreen)
+                    .weight(1f)
+                    .padding(horizontal = 16.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.DateRange,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Or pick from Gallery",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Divider with "OR"
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                HorizontalDivider(modifier = Modifier.weight(1f), color = TextSecondary.copy(alpha = 0.3f))
-                Text(
-                    text = "  OR ENTER MANUALLY  ",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = TextSecondary
-                )
-                HorizontalDivider(modifier = Modifier.weight(1f), color = TextSecondary.copy(alpha = 0.3f))
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Title Input
-            OutlinedTextField(
-                value = title,
-                onValueChange = { title = it },
-                label = { Text("Expense Title") },
-                placeholder = { Text("e.g., Coffee at Starbucks") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = AccentGreen,
-                    unfocusedBorderColor = TextSecondary.copy(alpha = 0.5f),
-                    focusedLabelColor = AccentGreen,
-                    unfocusedLabelColor = TextSecondary,
-                    cursorColor = AccentGreen,
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary,
-                    focusedPlaceholderColor = TextSecondary,
-                    unfocusedPlaceholderColor = TextSecondary
-                ),
-                singleLine = true
-            )
-
-            // Amount Input
-            OutlinedTextField(
-                value = amount,
-                onValueChange = { newValue ->
-                    if (newValue.isEmpty() || newValue.matches(Regex("^\\d*\\.?\\d{0,2}$"))) {
-                        amount = newValue
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                // AI Tier Selector
+                AiTierSelector(
+                    selectedTier = selectedTier,
+                    unlockedTiers = unlockedTiers,
+                    onTierSelected = { tier ->
+                        selectedTier = tier
+                        onTierSelected(tier)
                     }
-                },
-                label = { Text("Amount ($)") },
-                placeholder = { Text("0.00") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = AccentGreen,
-                    unfocusedBorderColor = TextSecondary.copy(alpha = 0.5f),
-                    focusedLabelColor = AccentGreen,
-                    unfocusedLabelColor = TextSecondary,
-                    cursorColor = AccentGreen,
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary,
-                    focusedPlaceholderColor = TextSecondary,
-                    unfocusedPlaceholderColor = TextSecondary
-                ),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                singleLine = true
-            )
+                )
 
-            // Category Dropdown
-            ExposedDropdownMenuBox(
-                expanded = showCategoryDropdown,
-                onExpandedChange = { showCategoryDropdown = it }
-            ) {
-                OutlinedTextField(
-                    value = "${selectedCategory.icon} ${selectedCategory.displayName}",
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Category") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showCategoryDropdown) },
+                // Scan Receipt Button
+                ScanReceiptButton(
+                    onClick = { onScanReceipt(selectedTier) },
+                    isScanning = isScanning,
+                    selectedTier = selectedTier
+                )
+                
+                // Gallery Button (compact)
+                TextButton(
+                    onClick = { 
+                        galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .menuAnchor(),
+                        .height(32.dp),
+                    enabled = !isScanning,
+                    colors = ButtonDefaults.textButtonColors(contentColor = AccentGreen)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.DateRange,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Or pick from Gallery",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                // Divider
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    HorizontalDivider(modifier = Modifier.weight(1f), color = TextSecondary.copy(alpha = 0.3f))
+                    Text(
+                        text = "  OR ENTER MANUALLY  ",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextSecondary
+                    )
+                    HorizontalDivider(modifier = Modifier.weight(1f), color = TextSecondary.copy(alpha = 0.3f))
+                }
+
+                // Title Input
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Expense Title") },
+                    placeholder = { Text("e.g., Coffee at Starbucks") },
+                    modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = AccentGreen,
                         unfocusedBorderColor = TextSecondary.copy(alpha = 0.5f),
                         focusedLabelColor = AccentGreen,
                         unfocusedLabelColor = TextSecondary,
+                        cursorColor = AccentGreen,
                         focusedTextColor = TextPrimary,
-                        unfocusedTextColor = TextPrimary
-                    )
+                        unfocusedTextColor = TextPrimary,
+                        focusedPlaceholderColor = TextSecondary,
+                        unfocusedPlaceholderColor = TextSecondary
+                    ),
+                    singleLine = true
                 )
-                ExposedDropdownMenu(
-                    expanded = showCategoryDropdown,
-                    onDismissRequest = { showCategoryDropdown = false },
-                    modifier = Modifier.background(CardBackground)
+
+                // Amount + Currency in one row
+                val commonCurrencies = listOf("VND", "USD", "EUR", "GBP", "JPY", "KRW", "THB", "CNY")
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.Top
                 ) {
-                    Category.entries.forEach { category ->
-                        DropdownMenuItem(
-                            text = { 
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(12.dp)
-                                            .clip(RoundedCornerShape(4.dp))
-                                            .background(category.color)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("${category.icon} ${category.displayName}", color = TextPrimary)
-                                }
-                            },
-                            onClick = {
-                                selectedCategory = category
-                                showCategoryDropdown = false
-                            },
-                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                    // Amount field takes more space
+                    OutlinedTextField(
+                        value = amount,
+                        onValueChange = { newValue ->
+                            if (newValue.isEmpty() || newValue.matches(Regex("^\\d*\\.?\\d{0,2}$"))) {
+                                amount = newValue
+                            }
+                        },
+                        label = { Text("Amount") },
+                        placeholder = { Text("0.00") },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = AccentGreen,
+                            unfocusedBorderColor = TextSecondary.copy(alpha = 0.5f),
+                            focusedLabelColor = AccentGreen,
+                            unfocusedLabelColor = TextSecondary,
+                            cursorColor = AccentGreen,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary,
+                            focusedPlaceholderColor = TextSecondary,
+                            unfocusedPlaceholderColor = TextSecondary
+                        ),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true
+                    )
+
+                    // Currency dropdown
+                    var showCurrencyMenu by remember { mutableStateOf(false) }
+                    ExposedDropdownMenuBox(
+                        expanded = showCurrencyMenu,
+                        onExpandedChange = { showCurrencyMenu = it },
+                        modifier = Modifier.width(120.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = selectedCurrency,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Currency") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showCurrencyMenu) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .menuAnchor(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = AccentGreen,
+                                unfocusedBorderColor = TextSecondary.copy(alpha = 0.5f),
+                                focusedLabelColor = AccentGreen,
+                                unfocusedLabelColor = TextSecondary,
+                                focusedTextColor = TextPrimary,
+                                unfocusedTextColor = TextPrimary
+                            ),
+                            singleLine = true
                         )
+                        ExposedDropdownMenu(
+                            expanded = showCurrencyMenu,
+                            onDismissRequest = { showCurrencyMenu = false },
+                            modifier = Modifier.background(CardBackground)
+                        ) {
+                            commonCurrencies.forEach { code ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            code,
+                                            color = if (code == selectedCurrency) AccentGreen else TextPrimary,
+                                            fontWeight = if (code == selectedCurrency) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                    },
+                                    onClick = {
+                                        selectedCurrency = code
+                                        showCurrencyMenu = false
+                                    },
+                                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                                )
+                            }
+                        }
                     }
                 }
-            }
 
-            // Notes Input (Optional)
-            OutlinedTextField(
-                value = notes,
-                onValueChange = { notes = it },
-                label = { Text("Notes (Optional)") },
-                placeholder = { Text("Add any extra details...") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = AccentGreen,
-                    unfocusedBorderColor = TextSecondary.copy(alpha = 0.5f),
-                    focusedLabelColor = AccentGreen,
-                    unfocusedLabelColor = TextSecondary,
-                    cursorColor = AccentGreen,
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary,
-                    focusedPlaceholderColor = TextSecondary,
-                    unfocusedPlaceholderColor = TextSecondary
-                ),
-                maxLines = 4
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Currency selector
-            val commonCurrencies = listOf("VND", "USD", "EUR", "GBP", "JPY", "KRW", "THB", "CNY")
-            Text(
-                text = "Currency",
-                style = MaterialTheme.typography.labelMedium,
-                color = TextSecondary,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                commonCurrencies.take(4).forEach { code ->
-                    FilterChip(
-                        selected = selectedCurrency == code,
-                        onClick = { selectedCurrency = code },
-                        label = { Text(code, fontSize = 12.sp) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = AccentGreen,
-                            selectedLabelColor = Color.Black,
-                            containerColor = CardBackground,
-                            labelColor = TextSecondary
-                        ),
-                        modifier = Modifier.weight(1f)
+                // Category Dropdown
+                ExposedDropdownMenuBox(
+                    expanded = showCategoryDropdown,
+                    onExpandedChange = { showCategoryDropdown = it }
+                ) {
+                    OutlinedTextField(
+                        value = "${selectedCategory.icon} ${selectedCategory.displayName}",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Category") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showCategoryDropdown) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = AccentGreen,
+                            unfocusedBorderColor = TextSecondary.copy(alpha = 0.5f),
+                            focusedLabelColor = AccentGreen,
+                            unfocusedLabelColor = TextSecondary,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary
+                        )
                     )
+                    ExposedDropdownMenu(
+                        expanded = showCategoryDropdown,
+                        onDismissRequest = { showCategoryDropdown = false },
+                        modifier = Modifier.background(CardBackground)
+                    ) {
+                        Category.entries.forEach { category ->
+                            DropdownMenuItem(
+                                text = { 
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(12.dp)
+                                                .clip(RoundedCornerShape(4.dp))
+                                                .background(category.color)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("${category.icon} ${category.displayName}", color = TextPrimary)
+                                    }
+                                },
+                                onClick = {
+                                    selectedCategory = category
+                                    showCategoryDropdown = false
+                                },
+                                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                            )
+                        }
+                    }
                 }
+
+                // Notes Input (compact)
+                OutlinedTextField(
+                    value = notes,
+                    onValueChange = { notes = it },
+                    label = { Text("Notes (Optional)") },
+                    placeholder = { Text("Add any extra details...") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(80.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = AccentGreen,
+                        unfocusedBorderColor = TextSecondary.copy(alpha = 0.5f),
+                        focusedLabelColor = AccentGreen,
+                        unfocusedLabelColor = TextSecondary,
+                        cursorColor = AccentGreen,
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary,
+                        focusedPlaceholderColor = TextSecondary,
+                        unfocusedPlaceholderColor = TextSecondary
+                    ),
+                    maxLines = 3
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Save Button
-            Button(
-                onClick = {
-                    val parsedAmount = amount.toDoubleOrNull() ?: 0.0
-                    if (title.isNotBlank() && parsedAmount > 0) {
-                        if (title.isNotBlank()) {
+            // Sticky bottom Save button
+            Surface(
+                color = SurfaceBackground,
+                tonalElevation = 8.dp,
+                shadowElevation = 8.dp
+            ) {
+                Button(
+                    onClick = {
+                        val parsedAmount = amount.toDoubleOrNull() ?: 0.0
+                        if (title.isNotBlank() && parsedAmount > 0) {
                             onSaveExpense(
                                 title,
                                 parsedAmount,
@@ -354,26 +389,25 @@ fun AddExpenseScreen(
                                 selectedCurrency
                             )
                         }
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = AccentGreen,
-                    contentColor = Color.Black
-                ),
-                enabled = title.isNotBlank() && (amount.toDoubleOrNull() ?: 0.0) > 0
-            ) {
-                Text(
-                    text = "Save Expense",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                        .height(52.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AccentGreen,
+                        contentColor = Color.Black
+                    ),
+                    enabled = title.isNotBlank() && (amount.toDoubleOrNull() ?: 0.0) > 0
+                ) {
+                    Text(
+                        text = "Save Expense",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
-
-            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
