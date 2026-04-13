@@ -345,9 +345,15 @@ fun AddExpenseScreen(
                 onClick = {
                     val parsedAmount = amount.toDoubleOrNull() ?: 0.0
                     if (title.isNotBlank() && parsedAmount > 0) {
-                    if (title.isNotBlank()) {
-                        onSaveExpense(title, parsedAmount, selectedCategory.displayName, notes.ifBlank { null }, selectedCurrency)
-                    }
+                        if (title.isNotBlank()) {
+                            onSaveExpense(
+                                title,
+                                parsedAmount,
+                                selectedCategory.displayName,
+                                notes.ifBlank { null },
+                                selectedCurrency
+                            )
+                        }
                     }
                 },
                 modifier = Modifier

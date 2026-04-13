@@ -81,6 +81,31 @@ class GeminiServiceManager @Inject constructor(
     }
     
     /**
+     * Sync unlocked tiers based on actual Google Play purchases.
+     * Revokes access to previously unlocked tiers if they are no longer in purchasedSkus.
+     */
+    fun syncPurchasedTiers(purchasedSkus: Set<String>) {
+        val validTiers = mutableSetOf(AiTier.BASIC)
+        AiTier.entries.forEach { tier ->
+            val skuId = tier.skuId
+            if (skuId != null && purchasedSkus.contains(skuId)) {
+                validTiers.add(tier)
+            }
+        }
+        
+        // If current tier is no longer unlocked, fallback to BASIC
+        if (_currentTier.value !in validTiers) {
+            _currentTier.value = AiTier.BASIC
+            saveTier(AiTier.BASIC)
+            createService(AiTier.BASIC)
+        }
+        
+        _unlockedTiers.value = validTiers
+        saveUnlockedTiers(validTiers)
+        Log.d(TAG, "Synced unlocked tiers from IAP: ${validTiers.map { it.displayName }}")
+    }
+    
+    /**
      * Unlock a tier (call after successful in-app purchase)
      */
     fun unlockTier(tier: AiTier) {
@@ -176,8 +201,8 @@ class GeminiServiceManager @Inject constructor(
                 ordinalStr.toIntOrNull()?.let { AiTier.fromOrdinal(it) }
             }.toSet()
         } else {
-            // Default: Unlock ALL tiers for testing
-            AiTier.entries.toSet()
+            // Default: Unlock only the BASIC tier
+            setOf(AiTier.BASIC)
         }
     }
     

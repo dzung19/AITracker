@@ -157,12 +157,7 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             billingManager.purchasedProducts.collect { purchasedSkus ->
                 Log.d("MainViewModel", "Purchased SKUs updated: $purchasedSkus")
-                AiTier.entries.forEach { tier ->
-                    val skuId = tier.skuId
-                    if (skuId != null && purchasedSkus.contains(skuId)) {
-                        geminiServiceManager.unlockTier(tier)
-                    }
-                }
+                geminiServiceManager.syncPurchasedTiers(purchasedSkus)
             }
         }
         

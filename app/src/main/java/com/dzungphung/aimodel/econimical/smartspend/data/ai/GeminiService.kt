@@ -374,8 +374,8 @@ INSTRUCTIONS:
    - Other (Services, Education)
 
 4. Extract a NOTE (Short Summary):
-   - List 2-3 main items purchased (e.g., "Latte, Croissant" or "Milk, Eggs, Bread").
-   - Keep it short (under 50 chars).
+   - List about 10 items purchased (e.g., "Latte, Croissant" or "Milk, Eggs, Bread").
+   - Keep it short (under 100 chars), use "..." if it too long.
    - If no specific items found, use "Purchase at Store Name".
 
 5. Detect CURRENCY:

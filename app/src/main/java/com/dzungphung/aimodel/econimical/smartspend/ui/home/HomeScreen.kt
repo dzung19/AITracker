@@ -1065,7 +1065,6 @@ private fun StreakCelebrationDialog(
             }
         }
     )
-    )
 }
 
 @Composable
