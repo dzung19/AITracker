@@ -24,4 +24,6 @@
 
 # Retain generic signatures of TypeToken and its subclasses with R8 version 3.0 and higher.
 
+
+
 ##---------------End: proguard configuration for Gson  ----------

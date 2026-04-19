@@ -51,11 +51,14 @@ android {
             manifestPlaceholders["caAppPubId"] = "ca-app-pub-3940256099942544~3347511713"
         }
         release {
-            isMinifyEnabled = false
+            buildConfigField("Boolean", "ADS_DISABLED", "true")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            isMinifyEnabled = true
+            isShrinkResources = true
+            manifestPlaceholders["caAppPubId"] = "ca-app-pub-3940256099942544~3347511713"
         }
     }
     compileOptions {
@@ -122,7 +125,6 @@ dependencies {
     implementation(libs.google.mlkit.text.recognition)
 
     implementation(libs.mediapipe.tasks.text)
-    implementation(libs.tensorflow.lite.gpu)
 
     // Serialization
     implementation(libs.kotlinx.serialization.json)
