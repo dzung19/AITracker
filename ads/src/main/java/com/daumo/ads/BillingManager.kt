@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
 private var PRODUCT_ID_REMOVE_ADS = "remove_ads_sku" // Will be updated with BuildConfig value
 class BillingManager(
     private val context: Context,
-    private val productIds: List<String> = emptyList(),
+    private val subscriptionIds: List<String> = emptyList(),
     private val onUserPurchasedRemoveAds: () -> Unit, // Callback khi mua thành công
     private val onBillingSetupFailed: (() -> Unit)? = null,
     private val onPurchaseFailed: ((billingResult: BillingResult) -> Unit)? = null
@@ -60,6 +60,7 @@ class BillingManager(
     private fun setupBillingClient() {
         val pendingPurchasesParams = PendingPurchasesParams.newBuilder()
             .enableOneTimeProducts()
+            .enablePrepaidPlans() // Required for subscription support
             .build()
 
         billingClient = BillingClient.newBuilder(context)
@@ -91,27 +92,60 @@ class BillingManager(
             return
         }
 
-        val allProductIds = (productIds + PRODUCT_ID_REMOVE_ADS).distinct()
-        val productList = allProductIds.map {
+        // Query INAPP products (remove_ads_sku)
+        val inAppProductList = listOf(
             QueryProductDetailsParams.Product.newBuilder()
-                .setProductId(it)
+                .setProductId(PRODUCT_ID_REMOVE_ADS)
                 .setProductType(BillingClient.ProductType.INAPP)
                 .build()
-        }
+        )
 
-        val params = QueryProductDetailsParams.newBuilder()
-            .setProductList(productList)
+        val inAppParams = QueryProductDetailsParams.newBuilder()
+            .setProductList(inAppProductList)
             .build()
 
-        billingClient.queryProductDetailsAsync(params) { billingResult, productDetailsList ->
+        i(TAG, "Querying INAPP products: [$PRODUCT_ID_REMOVE_ADS]")
+        billingClient.queryProductDetailsAsync(inAppParams) { billingResult, productDetailsList ->
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
                 productDetailsList.forEach { details ->
                     productDetailsMap[details.productId] = details
                 }
-                i(TAG, "Product details fetched successfully: ${productDetailsMap.keys}")
+                i(TAG, "INAPP query OK. Found ${productDetailsList.size} products: ${productDetailsList.map { it.productId }}")
             } else {
-                e(TAG, "Error querying product details. Response Code: ${billingResult.responseCode}, Debug Message: ${billingResult.debugMessage}")
+                e(TAG, "INAPP query FAILED. Response Code: ${billingResult.responseCode}, Debug Message: ${billingResult.debugMessage}")
             }
+        }
+
+        // Query SUBS products (ai_tier_standard, ai_tier_advanced, ai_tier_elite)
+        if (subscriptionIds.isNotEmpty()) {
+            val subsProductList = subscriptionIds.map {
+                QueryProductDetailsParams.Product.newBuilder()
+                    .setProductId(it)
+                    .setProductType(BillingClient.ProductType.SUBS)
+                    .build()
+            }
+
+            val subsParams = QueryProductDetailsParams.newBuilder()
+                .setProductList(subsProductList)
+                .build()
+
+            i(TAG, "Querying SUBS products: $subscriptionIds")
+            billingClient.queryProductDetailsAsync(subsParams) { billingResult, productDetailsList ->
+                if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                    productDetailsList.forEach { details ->
+                        productDetailsMap[details.productId] = details
+                        i(TAG, "SUBS found: ${details.productId}, offers: ${details.subscriptionOfferDetails?.size ?: 0}")
+                    }
+                    i(TAG, "SUBS query OK. Found ${productDetailsList.size} products: ${productDetailsList.map { it.productId }}")
+                    if (productDetailsList.isEmpty()) {
+                        w(TAG, "SUBS query returned 0 products. Check: 1) Products activated in Play Console? 2) App uploaded to testing track? 3) Base plan created for each subscription?")
+                    }
+                } else {
+                    e(TAG, "SUBS query FAILED. Response Code: ${billingResult.responseCode}, Debug Message: ${billingResult.debugMessage}")
+                }
+            }
+        } else {
+            w(TAG, "No subscription IDs provided to query.")
         }
     }
 
@@ -120,13 +154,16 @@ class BillingManager(
             e(TAG, "queryExistingPurchases: BillingClient is not ready.")
             return
         }
-        val params = QueryPurchasesParams.newBuilder()
+
+        val purchasedSet = mutableSetOf<String>()
+        var isPremium = false
+
+        // Query INAPP purchases
+        val inAppParams = QueryPurchasesParams.newBuilder()
             .setProductType(BillingClient.ProductType.INAPP)
             .build()
 
-        billingClient.queryPurchasesAsync(params) { billingResult, purchasesList ->
-            val purchasedSet = mutableSetOf<String>()
-            var isPremium = false
+        billingClient.queryPurchasesAsync(inAppParams) { billingResult, purchasesList ->
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
                 purchasesList.forEach { purchase ->
                     if (purchase.purchaseState == Purchase.PurchaseState.PURCHASED) {
@@ -136,18 +173,42 @@ class BillingManager(
                         }
                     }
                 }
+                i(TAG, "INAPP purchases found: ${purchasedSet}")
             } else {
-                e(TAG, "Error querying existing purchases: ${billingResult.debugMessage}, Response Code: ${billingResult.responseCode}")
+                e(TAG, "Error querying INAPP purchases: ${billingResult.debugMessage}")
             }
-            if (purchasedSet.contains(PRODUCT_ID_REMOVE_ADS)) {
-                isPremium = true
+
+            // After INAPP query completes, query SUBS purchases
+            val subsParams = QueryPurchasesParams.newBuilder()
+                .setProductType(BillingClient.ProductType.SUBS)
+                .build()
+
+            billingClient.queryPurchasesAsync(subsParams) { subsResult, subsPurchasesList ->
+                if (subsResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                    subsPurchasesList.forEach { purchase ->
+                        if (purchase.purchaseState == Purchase.PurchaseState.PURCHASED) {
+                            purchasedSet.addAll(purchase.products)
+                            if (!purchase.isAcknowledged) {
+                                acknowledgePurchase(purchase.purchaseToken, purchase.products)
+                            }
+                        }
+                    }
+                    i(TAG, "SUBS purchases found: ${subsPurchasesList.flatMap { it.products }}")
+                } else {
+                    e(TAG, "Error querying SUBS purchases: ${subsResult.debugMessage}")
+                }
+
+                // Update state after both queries complete
+                if (purchasedSet.contains(PRODUCT_ID_REMOVE_ADS)) {
+                    isPremium = true
+                }
+                if (isPremium && !_isUserPremium.value) {
+                    onUserPurchasedRemoveAds()
+                }
+                _isUserPremium.value = isPremium
+                _purchasedProducts.value = purchasedSet
+                i(TAG, "Existing purchases checked. User is premium: ${_isUserPremium.value}, Products: $purchasedSet")
             }
-            if (isPremium && !_isUserPremium.value) {
-                onUserPurchasedRemoveAds()
-            }
-            _isUserPremium.value = isPremium
-            _purchasedProducts.value = purchasedSet
-            i(TAG, "Existing purchases checked. User is premium: ${_isUserPremium.value}, Products: $purchasedSet")
         }
     }
 
@@ -164,19 +225,34 @@ class BillingManager(
 
         val productDetails = productDetailsMap[productId]
         if (productDetails == null) {
-            e(TAG, "launchPurchaseFlow: Product details for $productId not available. Querying again...")
+            e(TAG, "launchPurchaseFlow: Product details for $productId not available. Available: ${productDetailsMap.keys}. Querying again...")
             queryProductDetails()
             onPurchaseFailed?.invoke(BillingResult.newBuilder().setResponseCode(BillingClient.BillingResponseCode.ITEM_UNAVAILABLE).build())
             return
         }
 
-        val productDetailsParamsList = listOf(
-            BillingFlowParams.ProductDetailsParams.newBuilder()
-                .setProductDetails(productDetails)
-                .build()
-        )
+        // Build the ProductDetailsParams differently for SUBS vs INAPP
+        val productDetailsParamsBuilder = BillingFlowParams.ProductDetailsParams.newBuilder()
+            .setProductDetails(productDetails)
+
+        // Subscriptions REQUIRE an offerToken
+        if (productDetails.productType == BillingClient.ProductType.SUBS) {
+            val offerToken = productDetails.subscriptionOfferDetails
+                ?.firstOrNull()
+                ?.offerToken
+
+            if (offerToken == null) {
+                e(TAG, "launchPurchaseFlow: No offer token found for subscription $productId")
+                onPurchaseFailed?.invoke(BillingResult.newBuilder().setResponseCode(BillingClient.BillingResponseCode.ITEM_UNAVAILABLE).build())
+                return
+            }
+
+            productDetailsParamsBuilder.setOfferToken(offerToken)
+            i(TAG, "Using offerToken for subscription $productId")
+        }
+
         val billingFlowParams = BillingFlowParams.newBuilder()
-            .setProductDetailsParamsList(productDetailsParamsList)
+            .setProductDetailsParamsList(listOf(productDetailsParamsBuilder.build()))
             .build()
 
         val launchResult = billingClient.launchBillingFlow(activity, billingFlowParams)

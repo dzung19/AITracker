@@ -66,7 +66,7 @@ object AppModule {
         val aiTierSkus = AiTier.entries.mapNotNull { it.skuId }
         return BillingManager(
             context = context,
-            productIds = aiTierSkus,
+            subscriptionIds = aiTierSkus,
             onUserPurchasedRemoveAds = {
                 // Future use
             }
