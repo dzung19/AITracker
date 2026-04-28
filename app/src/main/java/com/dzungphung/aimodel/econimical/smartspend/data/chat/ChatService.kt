@@ -30,7 +30,7 @@ class ChatService @Inject constructor(
             val systemPrompt = "You are a financial advisor. Context: User spent ${currencyFormat.format(expense.amount)} on ${expense.title} (Category: ${expense.category}). User says: \"$message\". Reply concisely (max 2 sentences) with advice."
             val aiResponse = geminiServiceManager.chat(systemPrompt)
             if (!aiResponse.isNullOrBlank()) {
-                return ChatMessage(text = aiResponse + " ✨", isUser = false)
+                return ChatMessage(text = "$aiResponse ✨", isUser = false)
             }
         }
 
@@ -76,7 +76,7 @@ class ChatService @Inject constructor(
             """.trimIndent()
             val aiResponse = geminiServiceManager.chat(systemPrompt)
             if (!aiResponse.isNullOrBlank()) {
-                return ChatMessage(text = aiResponse + " 📊", isUser = false)
+                return ChatMessage(text = "$aiResponse 📊", isUser = false)
             }
         }
 

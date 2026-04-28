@@ -1,4 +1,4 @@
-package com.daumo.bamboo3x.ringtones.ui.components
+package com.dzungphung.aimodel.econimical.smartspend.ui.components
 
 import android.app.Activity
 import android.util.Log

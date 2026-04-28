@@ -22,6 +22,7 @@ import com.dzungphung.aimodel.econimical.smartspend.ui.camera.CameraScreen
 import com.dzungphung.aimodel.econimical.smartspend.ui.home.HomeScreen
 import com.dzungphung.aimodel.econimical.smartspend.ui.detail.ExpenseDetailScreen
 import com.dzungphung.aimodel.econimical.smartspend.ui.analytics.AnalyticsScreen
+import com.dzungphung.aimodel.econimical.smartspend.ui.components.showInterstitialAd
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import androidx.lifecycle.Lifecycle
@@ -93,6 +94,23 @@ fun SmartSpendNavHost(
     
     // Track pending tier for camera permission flow
     var pendingTier by remember { mutableStateOf(AiTier.BASIC) }
+
+    // Interstitial ad state - triggered at natural transition points
+    var showInterstitialTrigger by remember { mutableStateOf(false) }
+    var interstitialDestination by remember { mutableStateOf<String?>(null) }
+
+    // Interstitial ad composable - fires when triggered
+    showInterstitialAd(
+        showAd = showInterstitialTrigger,
+        onAdClosed = {
+            showInterstitialTrigger = false
+            // Navigate to destination after ad closes
+            interstitialDestination?.let { dest ->
+                navController.navigate(dest)
+                interstitialDestination = null
+            }
+        }
+    )
     
     // Camera permission launcher
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
@@ -139,7 +157,11 @@ fun SmartSpendNavHost(
                 onExpenseClick = { expenseId ->
                     navController.navigate(Screen.ExpenseDetail.createRoute(expenseId))
                 },
-                onTotalClick = { navController.navigate(Screen.Analytics.route) },
+                onTotalClick = {
+                    // Show interstitial before navigating to Analytics
+                    interstitialDestination = Screen.Analytics.route
+                    showInterstitialTrigger = true
+                },
                 onTierManagementClick = { navController.navigate(Screen.TierManagement.route) },
                 isMonthUnderBudget = { year, month -> viewModel.isMonthUnderBudget(year, month) },
                 currencyFormatter = viewModel.currencyFormatter,
@@ -214,6 +236,9 @@ fun SmartSpendNavHost(
                 },
                 onSaveExpense = { title, amount, category, notes, currencyCode ->
                     viewModel.addExpense(title, amount, category, notes, currencyCode)
+                    // Show interstitial after saving, then navigate back
+                    interstitialDestination = null // No navigation, just pop
+                    showInterstitialTrigger = true
                     navController.popBackStack(Screen.Home.route, inclusive = false)
                 },
                 onScanReceipt = { tier ->

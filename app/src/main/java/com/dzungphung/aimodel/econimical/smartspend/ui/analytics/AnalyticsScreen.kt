@@ -57,6 +57,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.PathEffect
 import androidx.core.graphics.toColorInt
 import com.dzungphung.aimodel.econimical.smartspend.data.ai.ModelDownloadManager
+import com.dzungphung.aimodel.econimical.smartspend.ui.components.BannerAd
 import java.text.NumberFormat
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -208,6 +209,13 @@ fun AnalyticsScreen(
                 isLoading = isAnalyzing,
                 onAnalyze = onAnalyzeClick
             )
+
+            // Banner Ad - placed at bottom of scroll content, away from buttons
+            Spacer(modifier = Modifier.height(8.dp))
+            BannerAd(
+                modifier = Modifier.padding(horizontal = 8.dp)
+            )
+            Spacer(modifier = Modifier.height(80.dp)) // Space for FAB
         }
 
         if (showBottomSheet) {

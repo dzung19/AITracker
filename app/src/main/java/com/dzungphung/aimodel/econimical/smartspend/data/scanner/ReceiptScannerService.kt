@@ -10,7 +10,9 @@ import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import android.content.Context
 import android.net.Uri
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -27,13 +29,14 @@ class ReceiptScannerService {
     /**
      * Extracts text from an ImageProxy using ML Kit.
      * This runs entirely on-device - no API cost!
+     * Bitmap conversion runs on Dispatchers.Default to avoid blocking Main thread.
      */
     suspend fun extractTextFromImage(imageProxy: ImageProxy): String {
+        val bitmap = imageProxyToBitmap(imageProxy)
+        val inputImage = InputImage.fromBitmap(bitmap, 0)
+
         return suspendCancellableCoroutine { continuation ->
             try {
-                val bitmap = imageProxyToBitmap(imageProxy)
-                val inputImage = InputImage.fromBitmap(bitmap, 0)
-                
                 textRecognizer.process(inputImage)
                     .addOnSuccessListener { visionText ->
                         val extractedText = visionText.text
@@ -58,7 +61,7 @@ class ReceiptScannerService {
      * Converts ImageProxy to Bitmap.
      * Handles rotation based on image metadata.
      */
-    private fun imageProxyToBitmap(imageProxy: ImageProxy): Bitmap {
+    private suspend fun imageProxyToBitmap(imageProxy: ImageProxy): Bitmap = withContext(Dispatchers.Default) {
         val buffer = imageProxy.planes[0].buffer
         val bytes = ByteArray(buffer.remaining())
         buffer.get(bytes)
@@ -68,7 +71,7 @@ class ReceiptScannerService {
         
         // Handle rotation
         val rotationDegrees = imageProxy.imageInfo.rotationDegrees
-        return if (rotationDegrees != 0) {
+        if (rotationDegrees != 0) {
             val matrix = Matrix().apply { postRotate(rotationDegrees.toFloat()) }
             Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
         } else {
@@ -78,12 +81,16 @@ class ReceiptScannerService {
     
     /**
      * Extracts text from a Uri (Gallery Image).
+     * Image loading runs on Dispatchers.IO to avoid blocking Main thread.
      */
     suspend fun extractTextFromUri(context: Context, uri: Uri): String {
+        // Offload file I/O to IO dispatcher
+        val inputImage = withContext(Dispatchers.IO) {
+            InputImage.fromFilePath(context, uri)
+        }
+
         return suspendCancellableCoroutine { continuation ->
             try {
-                val inputImage = InputImage.fromFilePath(context, uri)
-                
                 textRecognizer.process(inputImage)
                     .addOnSuccessListener { visionText ->
                         val extractedText = visionText.text

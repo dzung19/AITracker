@@ -41,6 +41,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import com.dzungphung.aimodel.econimical.smartspend.data.local.Category
 import com.dzungphung.aimodel.econimical.smartspend.ui.TimePeriod
+import com.dzungphung.aimodel.econimical.smartspend.ui.components.BannerAd
 import kotlinx.coroutines.delay
 
 // Premium Color Palette
@@ -344,6 +345,14 @@ fun HomeScreen(
                             onClick = { onExpenseClick(expense.id) }
                         )
                     }
+                }
+
+                // Banner Ad - placed as scrollable content, well separated from interactive elements
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    BannerAd(
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
                 }
 
                 item {
